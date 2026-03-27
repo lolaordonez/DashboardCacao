@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cocoa Exports Dashboard - Ecuador</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f8fb;
+    --card: #ffffff;
+    --line: #d9e2f0;
+    --text: #17324d;
+    --muted: #60738a;
+    --blue: #1f5fbf;
+    --blue2: #77a8ff;
+    --accent: #0f3d91;
+    --soft: #eef4ff;
+    --shadow: 0 12px 32px rgba(22,42,74,.08);
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Inter, Arial, sans-serif; background: var(--bg); color: var(--text); }
+  .wrap { max-width: 1400px; margin:0 auto; padding:28px; }
+  .hero { display:flex; justify-content:space-between; gap:24px; align-items:flex-start; margin-bottom:22px; }
+  .hero h1 { margin:0 0 8px; font-size:34px; line-height:1.1; }
+  .hero p { margin:0; color: var(--muted); max-width:820px; line-height:1.55; }
+  .badge { background: var(--soft); color: var(--accent); border:1px solid #cfe0ff; padding:10px 14px; border-radius:999px; font-weight:700; white-space:nowrap; }
+  .controls { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:22px; }
+  .control { background: var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; box-shadow: var(--shadow); min-width:200px; }
+  label { display:block; font-size:12px; color: var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; }
+  select { width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:white; color: var(--text); font-weight:600; }
+  .kpis { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:16px; margin-bottom:22px; }
+  .card { background: var(--card); border:1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .kpi { padding:18px 18px 16px; }
+  .kpi .label { color: var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:10px; }
+  .kpi .value { font-size:30px; font-weight:800; margin-bottom:6px; }
+  .kpi .sub { color: var(--muted); font-size:14px; }
+  .grid { display:grid; grid-template-columns: 1.45fr .95fr; gap:16px; margin-bottom:16px; }
+  .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px; }
+  .chart-card { padding:14px 14px 6px; }
+  .card-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; padding:6px 6px 10px; }
+  .card-head h3 { margin:0; font-size:20px; }
+  .card-head p { margin:6px 0 0; color: var(--muted); font-size:14px; line-height:1.45; max-width:760px; }
+  .insight { color: var(--accent); background: var(--soft); border:1px solid #d5e4ff; border-radius:12px; padding:10px 12px; font-weight:700; font-size:13px; min-width:220px; }
+  #detailPanel { padding:16px; min-height:180px; }
+  .detail-title { font-size:22px; margin:0 0 6px; font-weight:800; }
+  .detail-title-row { display:flex; align-items:center; gap:10px; margin:0 0 6px; }
+  .detail-flag { font-size:28px; line-height:1; }
+  .detail-year { color: var(--muted); margin-bottom:16px; font-weight:600; }
+  .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .detail-box { background:#f8fbff; border:1px solid #dce8fb; border-radius:14px; padding:12px; }
+  .detail-box .small { color: var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; margin-bottom:8px; }
+  .detail-box .big { font-size:20px; font-weight:800; }
+  .map-country-picker { margin-top:14px; padding:12px; background:#f8fbff; border:1px solid #dce8fb; border-radius:14px; }
+  .foot { padding:10px 4px 0; color: var(--muted); font-size:13px; line-height:1.5; }
+  .source-note { margin-top:12px; padding:12px 14px; background:#fff; border:1px dashed #cfd9ea; border-radius:14px; color: var(--muted); font-size:13px; }
+  @media (max-width: 1100px) {
+    .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid, .grid-2 { grid-template-columns: 1fr; }
+    .hero { flex-direction:column; }
+  }
+  @media (max-width: 700px) {
+    .wrap { padding:16px; }
+    .kpis { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <h1>Ecuador Cocoa Exports Dashboard</h1>
+      <p>Interactive view of Ecuador’s cocoa exports to the top 10 destination markets. The dashboard is aligned with the group report by combining trends, market concentration, product composition, prices, and a world map focused on trade connections from Ecuador.</p>
+    </div>
+    <div class="badge">Final project dashboard</div>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="yearSelect">Map and detail year</label>
+      <select id="yearSelect"></select>
+    </div>
+    <div class="control">
+      <label for="productSelect">Product filter for trend</label>
+      <select id="productSelect"></select>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi">
+      <div class="label">Total export value</div>
+      <div class="value" id="kpiTotalValue"></div>
+      <div class="sub" id="kpiSpan"></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Total export volume</div>
+      <div class="value" id="kpiTotalKg"></div>
+      <div class="sub">Measured in kilograms</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Largest destination market</div>
+      <div class="value" id="kpiTopMarket"></div>
+      <div class="sub" id="kpiTopMarketValue"></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Leading product code</div>
+      <div class="value" id="kpiTopProduct"></div>
+      <div class="sub" id="kpiTopProductValue"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card chart-card">
+      <div class="card-head">
+        <div>
+          <h3>Global trade map</h3>
+          <p>Lines connect Ecuador with the main destination countries. Click any destination marker to open a focused panel with that country’s data for the selected year.</p>
+        </div>
+        <div class="insight" id="mapInsight"></div>
+      </div>
+      <div id="mapChart" style="height:560px;"></div>
+      <div class="map-country-picker">
+        <label for="countrySelect">Country detail selector</label>
+        <select id="countrySelect"></select>
+      </div>
+      <div class="foot">Tip: use the year selector above, then click a country marker on the map.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head" style="padding:20px 20px 0;">
+        <div>
+          <h3>Country detail</h3>
+          <p>This section helps explain market concentration and trade dynamics without overloading the dashboard.</p>
+        </div>
+      </div>
+      <div id="detailPanel">
+        <div class="detail-title">Select a country on the map</div>
+        <div class="detail-year">The panel will update with export value, kilograms, tariff, GDP, and the strongest product for that year.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card chart-card">
+      <div class="card-head">
+        <div>
+          <h3>Export trend over time</h3>
+          <p>Shows whether export performance is being explained by stronger value, stronger physical volume, or both.</p>
+        </div>
+        <div class="insight">Core storyline: value and volume do not always move the same way.</div>
+      </div>
+      <div id="trendChart" style="height:380px;"></div>
+    </div>
+
+    <div class="card chart-card">
+      <div class="card-head">
+        <div>
+          <h3>Top destination markets</h3>
+          <p>Ranks the main countries importing Ecuadorian cocoa within the selected top-10 group.</p>
+        </div>
+        <div class="insight" id="marketInsight"></div>
+      </div>
+      <div id="countryBar" style="height:380px;"></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card chart-card">
+      <div class="card-head">
+        <div>
+          <h3>Export composition by product</h3>
+          <p>Useful to connect the dashboard with the report’s discussion about raw cocoa versus more processed cocoa products.</p>
+        </div>
+        <div class="insight">Processed products help discuss value addition.</div>
+      </div>
+      <div id="productBar" style="height:400px;"></div>
+    </div>
+
+    <div class="card chart-card">
+      <div class="card-head">
+        <div>
+          <h3>Importer GDP vs export value</h3>
+          <p>Simple relationship view to connect market size with export performance.</p>
+        </div>
+        <div class="insight">Use this as context, not strict causality.</div>
+      </div>
+      <div id="scatterChart" style="height:400px;"></div>
+    </div>
+  </div>
+
+  <div class="source-note">Dashboard built from the cleaned export database used in the group’s cocoa globalization case study. Recommended use: present the report first, then use this dashboard to reinforce trends, market concentration, value-added products, and risk exposure.</div>
+</div>
+
+<script>
+const DB = {"years": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "topCountries": ["Indonesia", "Germany", "Belgium", "Canada", "China", "Estonia", "Colombia", "Bulgaria", "Algeria", "Australia"], "annual": [{"period": 2015, "export_value": 164747046.0, "export_kg": 53911407.47, "avg_cocoa_price": 3130.0}, {"period": 2016, "export_value": 163848372.0, "export_kg": 61252701.09, "avg_cocoa_price": 2890.0}, {"period": 2017, "export_value": 200282257.0, "export_kg": 95023204.2, "avg_cocoa_price": 2030.0}, {"period": 2018, "export_value": 272443004.0, "export_kg": 118718175.50999999, "avg_cocoa_price": 2290.0}, {"period": 2019, "export_value": 277630628.0, "export_kg": 113443092.8, "avg_cocoa_price": 2340.0}, {"period": 2020, "export_value": 332243535.0, "export_kg": 130892727.2, "avg_cocoa_price": 2370.0}, {"period": 2021, "export_value": 308555320.0, "export_kg": 123182675.4, "avg_cocoa_price": 2400.0}, {"period": 2022, "export_value": 324872458.0, "export_kg": 139429786.314, "avg_cocoa_price": 2510.0}, {"period": 2023, "export_value": 363497496.0, "export_kg": 0.0, "avg_cocoa_price": 3770.0}, {"period": 2024, "export_value": 1267929380.0, "export_kg": 161862859.7, "avg_cocoa_price": 4600.0}], "countryYear": [{"period": 2015, "Partner": "Australia", "export_value": 257132.0, "export_kg": 46323.0, "avg_tariff": 1.25, "avg_gdp_importer": 1356805839935.9, "top_product_code": "180400", "top_product_value": 125746.0, "top_product_kg": 13386.0, "top_product_label": "180400"}, {"period": 2015, "Partner": "Belgium", "export_value": 31743976.0, "export_kg": 10265765.47, "avg_tariff": 4.0, "avg_gdp_importer": 461044767544.53, "top_product_code": "180100", "top_product_value": 31218630.0, "top_product_kg": 10265752.0, "top_product_label": "180100"}, {"period": 2015, "Partner": "Bulgaria", "export_value": 2000.0, "export_kg": 250.0, "avg_tariff": 0.0, "avg_gdp_importer": 50765918159.15, "top_product_code": "180400", "top_product_value": 2000.0, "top_product_kg": 250.0, "top_product_label": "180400"}, {"period": 2015, "Partner": "Canada", "export_value": 34944562.0, "export_kg": 11618465.0, "avg_tariff": 1.5, "avg_gdp_importer": 1556508816217.14, "top_product_code": "180100", "top_product_value": 34787718.0, "top_product_kg": 11602451.0, "top_product_label": "180100"}, {"period": 2015, "Partner": "China", "export_value": 18426286.0, "export_kg": 6252751.0, "avg_tariff": 0.0, "avg_gdp_importer": 11280814787468.9, "top_product_code": "180100", "top_product_value": 18426286.0, "top_product_kg": 6252751.0, "top_product_label": "180100"}, {"period": 2015, "Partner": "Colombia", "export_value": 12992462.0, "export_kg": 4386378.0, "avg_tariff": 2.5, "avg_gdp_importer": 293492370193.17, "top_product_code": "180100", "top_product_value": 8332909.0, "top_product_kg": 2801150.0, "top_product_label": "180100"}, {"period": 2015, "Partner": "Estonia", "export_value": 17696003.0, "export_kg": 5853408.0, "avg_tariff": 0.0, "avg_gdp_importer": 23311847750.94, "top_product_code": "180100", "top_product_value": 17696003.0, "top_product_kg": 5853408.0, "top_product_label": "180100"}, {"period": 2015, "Partner": "Germany", "export_value": 36929977.0, "export_kg": 11662383.0, "avg_tariff": 3.2, "avg_gdp_importer": 3425099578746.09, "top_product_code": "180100", "top_product_value": 36139020.0, "top_product_kg": 11500065.0, "top_product_label": "180100"}, {"period": 2015, "Partner": "Indonesia", "export_value": 11754648.0, "export_kg": 3825684.0, "avg_tariff": 0.0, "avg_gdp_importer": 860854232686.21, "top_product_code": "180100", "top_product_value": 11754648.0, "top_product_kg": 3825684.0, "top_product_label": "180100"}, {"period": 2016, "Partner": "Algeria", "export_value": 580571.0, "export_kg": 200100.0, "avg_tariff": 0.0, "avg_gdp_importer": 180763839522.15, "top_product_code": "180100", "top_product_value": 580571.0, "top_product_kg": 200100.0, "top_product_label": "180100"}, {"period": 2016, "Partner": "Australia", "export_value": 350685.0, "export_kg": 75882.0, "avg_tariff": 0.0, "avg_gdp_importer": 1211588128417.61, "top_product_code": "180100", "top_product_value": 158810.0, "top_product_kg": 41929.0, "top_product_label": "180100"}, {"period": 2016, "Partner": "Belgium", "export_value": 18754844.0, "export_kg": 6757044.0, "avg_tariff": 0.0, "avg_gdp_importer": 474271566739.73, "top_product_code": "180100", "top_product_value": 18754844.0, "top_product_kg": 6757044.0, "top_product_label": "180100"}, {"period": 2016, "Partner": "Bulgaria", "export_value": 12553.0, "export_kg": 4037.0, "avg_tariff": 0.0, "avg_gdp_importer": 53929397039.21, "top_product_code": "180100", "top_product_value": 9513.0, "top_product_kg": 3637.0, "top_product_label": "180100"}, {"period": 2016, "Partner": "Canada", "export_value": 14102166.0, "export_kg": 5088256.0, "avg_tariff": 1.5, "avg_gdp_importer": 1527994741907.43, "top_product_code": "180100", "top_product_value": 13930500.0, "top_product_kg": 5068615.0, "top_product_label": "180100"}, {"period": 2016, "Partner": "China", "export_value": 18215542.0, "export_kg": 11086898.0, "avg_tariff": 10.0, "avg_gdp_importer": 11456024084962.0, "top_product_code": "180100", "top_product_value": 18208579.0, "top_product_kg": 11086759.0, "top_product_label": "180100"}, {"period": 2016, "Partner": "Colombia", "export_value": 16966657.0, "export_kg": 6095598.11, "avg_tariff": 2.5, "avg_gdp_importer": 282720100286.23, "top_product_code": "180100", "top_product_value": 12565923.0, "top_product_kg": 4471058.0, "top_product_label": "180100"}, {"period": 2016, "Partner": "Estonia", "export_value": 2493344.0, "export_kg": 950475.0, "avg_tariff": 0.0, "avg_gdp_importer": 24561027787.79, "top_product_code": "180100", "top_product_value": 2493344.0, "top_product_kg": 950475.0, "top_product_label": "180100"}, {"period": 2016, "Partner": "Germany", "export_value": 45995068.0, "export_kg": 14340097.98, "avg_tariff": 3.2, "avg_gdp_importer": 3536787895179.0, "top_product_code": "180100", "top_product_value": 37771676.0, "top_product_kg": 12999885.0, "top_product_label": "180100"}, {"period": 2016, "Partner": "Indonesia", "export_value": 46376942.0, "export_kg": 16654313.0, "avg_tariff": 0.0, "avg_gdp_importer": 931877364037.7, "top_product_code": "180100", "top_product_value": 46376942.0, "top_product_kg": 16654313.0, "top_product_label": "180100"}, {"period": 2017, "Partner": "Algeria", "export_value": 762411.0, "export_kg": 400062.0, "avg_tariff": 0.0, "avg_gdp_importer": 189880896903.07, "top_product_code": "180100", "top_product_value": 762411.0, "top_product_kg": 400062.0, "top_product_label": "180100"}, {"period": 2017, "Partner": "Australia", "export_value": 382305.0, "export_kg": 79713.6, "avg_tariff": 0.0, "avg_gdp_importer": 1330890554614.09, "top_product_code": "180400", "top_product_value": 164691.0, "top_product_kg": 20854.6, "top_product_label": "180400"}, {"period": 2017, "Partner": "Belgium", "export_value": 25492173.0, "export_kg": 12916983.0, "avg_tariff": 0.0, "avg_gdp_importer": 500908767351.53, "top_product_code": "180100", "top_product_value": 25374416.0, "top_product_kg": 12884829.4, "top_product_label": "180100"}, {"period": 2017, "Partner": "Bulgaria", "export_value": 22009.0, "export_kg": 8404.0, "avg_tariff": 0.0, "avg_gdp_importer": 59167647387.61001, "top_product_code": "180100", "top_product_value": 19609.0, "top_product_kg": 8004.0, "top_product_label": "180100"}, {"period": 2017, "Partner": "Canada", "export_value": 21052366.0, "export_kg": 9726425.7, "avg_tariff": 1.5, "avg_gdp_importer": 1649265644244.1, "top_product_code": "180100", "top_product_value": 20921695.0, "top_product_kg": 9713500.7, "top_product_label": "180100"}, {"period": 2017, "Partner": "China", "export_value": 9242914.0, "export_kg": 4928946.0, "avg_tariff": 7.5, "avg_gdp_importer": 12537559062282.9, "top_product_code": "180100", "top_product_value": 8491102.0, "top_product_kg": 4527371.0, "top_product_label": "180100"}, {"period": 2017, "Partner": "Colombia", "export_value": 4399910.0, "export_kg": 2276104.5, "avg_tariff": 2.0, "avg_gdp_importer": 311866875156.88, "top_product_code": "180500", "top_product_value": 3860750.0, "top_product_kg": 2089796.0, "top_product_label": "180500"}, {"period": 2017, "Partner": "Estonia", "export_value": 11638481.0, "export_kg": 6353351.0, "avg_tariff": 0.0, "avg_gdp_importer": 27469461919.12, "top_product_code": "180100", "top_product_value": 11638481.0, "top_product_kg": 6353351.0, "top_product_label": "180100"}, {"period": 2017, "Partner": "Germany", "export_value": 41310412.0, "export_kg": 15239791.4, "avg_tariff": 1.6, "avg_gdp_importer": 3765351626105.8896, "top_product_code": "180100", "top_product_value": 26281551.0, "top_product_kg": 12329082.1, "top_product_label": "180100"}, {"period": 2017, "Partner": "Indonesia", "export_value": 85979276.0, "export_kg": 43093423.0, "avg_tariff": 0.0, "avg_gdp_importer": 1015618744159.73, "top_product_code": "180100", "top_product_value": 85979276.0, "top_product_kg": 43093423.0, "top_product_label": "180100"}, {"period": 2018, "Partner": "Australia", "export_value": 609099.0, "export_kg": 160605.91, "avg_tariff": 1.25, "avg_gdp_importer": 1433144978761.67, "top_product_code": "180500", "top_product_value": 319329.0, "top_product_kg": 93367.2, "top_product_label": "180500"}, {"period": 2018, "Partner": "Belgium", "export_value": 24189984.0, "export_kg": 10247370.5, "avg_tariff": 0.0, "avg_gdp_importer": 542638913427.92, "top_product_code": "180100", "top_product_value": 24096700.0, "top_product_kg": 10228947.9, "top_product_label": "180100"}, {"period": 2018, "Partner": "Bulgaria", "export_value": 122486.0, "export_kg": 25001.0, "avg_tariff": 0.0, "avg_gdp_importer": 66097226262.22, "top_product_code": "180400", "top_product_value": 77692.0, "top_product_kg": 10500.0, "top_product_label": "180400"}, {"period": 2018, "Partner": "Canada", "export_value": 18258231.0, "export_kg": 8702026.0, "avg_tariff": 1.5, "avg_gdp_importer": 1725329192783.02, "top_product_code": "180100", "top_product_value": 17661036.0, "top_product_kg": 8628503.2, "top_product_label": "180100"}, {"period": 2018, "Partner": "China", "export_value": 33693705.0, "export_kg": 14852676.9, "avg_tariff": 10.0, "avg_gdp_importer": 14147765772963.803, "top_product_code": "180100", "top_product_value": 33668051.0, "top_product_kg": 14850560.0, "top_product_label": "180100"}, {"period": 2018, "Partner": "Colombia", "export_value": 5646182.0, "export_kg": 2520612.3, "avg_tariff": 2.0, "avg_gdp_importer": 334198218098.28, "top_product_code": "180500", "top_product_value": 5437054.0, "top_product_kg": 2442680.0, "top_product_label": "180500"}, {"period": 2018, "Partner": "Estonia", "export_value": 13975767.0, "export_kg": 6454893.0, "avg_tariff": 0.0, "avg_gdp_importer": 31222632740.72, "top_product_code": "180100", "top_product_value": 13975767.0, "top_product_kg": 6454893.0, "top_product_label": "180100"}, {"period": 2018, "Partner": "Germany", "export_value": 47699482.0, "export_kg": 16948689.9, "avg_tariff": 1.6, "avg_gdp_importer": 4055433215301.96, "top_product_code": "180100", "top_product_value": 32704515.0, "top_product_kg": 14356291.4, "top_product_label": "180100"}, {"period": 2018, "Partner": "Indonesia", "export_value": 128248068.0, "export_kg": 58806300.0, "avg_tariff": 0.0, "avg_gdp_importer": 1042271532988.63, "top_product_code": "180100", "top_product_value": 128248068.0, "top_product_kg": 58806300.0, "top_product_label": "180100"}, {"period": 2019, "Partner": "Algeria", "export_value": 2456355.0, "export_kg": 1000776.0, "avg_tariff": 0.0, "avg_gdp_importer": 193459662090.68, "top_product_code": "180100", "top_product_value": 2456355.0, "top_product_kg": 1000776.0, "top_product_label": "180100"}, {"period": 2019, "Partner": "Australia", "export_value": 382378.0, "export_kg": 121936.0, "avg_tariff": 0.0, "avg_gdp_importer": 1398349602956.35, "top_product_code": "180500", "top_product_value": 292930.0, "top_product_kg": 92020.0, "top_product_label": "180500"}, {"period": 2019, "Partner": "Belgium", "export_value": 21069930.0, "export_kg": 8465463.5, "avg_tariff": 0.0, "avg_gdp_importer": 536726344405.49, "top_product_code": "180100", "top_product_value": 21059364.0, "top_product_kg": 8461636.3, "top_product_label": "180100"}, {"period": 2019, "Partner": "Bulgaria", "export_value": 26736.0, "export_kg": 7853.0, "avg_tariff": 0.0, "avg_gdp_importer": 68507731353.91, "top_product_code": "180100", "top_product_value": 16179.0, "top_product_kg": 6003.0, "top_product_label": "180100"}, {"period": 2019, "Partner": "Canada", "export_value": 11076974.0, "export_kg": 4713069.8, "avg_tariff": 1.5, "avg_gdp_importer": 1743725183672.52, "top_product_code": "180100", "top_product_value": 10748905.0, "top_product_kg": 4675517.0, "top_product_label": "180100"}, {"period": 2019, "Partner": "China", "export_value": 12987058.0, "export_kg": 5701246.5, "avg_tariff": 9.5, "avg_gdp_importer": 14560167101283.4, "top_product_code": "180100", "top_product_value": 12948022.0, "top_product_kg": 5649867.5, "top_product_label": "180100"}, {"period": 2019, "Partner": "Colombia", "export_value": 6019772.0, "export_kg": 2861536.2, "avg_tariff": 2.5, "avg_gdp_importer": 323031701192.84, "top_product_code": "180500", "top_product_value": 5837069.0, "top_product_kg": 2816895.0, "top_product_label": "180500"}, {"period": 2019, "Partner": "Estonia", "export_value": 11657038.0, "export_kg": 4867194.0, "avg_tariff": 0.0, "avg_gdp_importer": 31873748770.03, "top_product_code": "180100", "top_product_value": 11657038.0, "top_product_kg": 4867194.0, "top_product_label": "180100"}, {"period": 2019, "Partner": "Germany", "export_value": 43143700.0, "export_kg": 15124037.8, "avg_tariff": 1.6, "avg_gdp_importer": 3959894794039.21, "top_product_code": "180100", "top_product_value": 34267670.0, "top_product_kg": 13565872.5, "top_product_label": "180100"}, {"period": 2019, "Partner": "Indonesia", "export_value": 168810687.0, "export_kg": 70579980.0, "avg_tariff": 0.0, "avg_gdp_importer": 1119099871350.2, "top_product_code": "180100", "top_product_value": 168810687.0, "top_product_kg": 70579980.0, "top_product_label": "180100"}, {"period": 2020, "Partner": "Australia", "export_value": 414746.0, "export_kg": 121961.4, "avg_tariff": 2.0, "avg_gdp_importer": 1333336461648.09, "top_product_code": "180500", "top_product_value": 263498.0, "top_product_kg": 78973.0, "top_product_label": "180500"}, {"period": 2020, "Partner": "Belgium", "export_value": 31942304.0, "export_kg": 11949715.399999999, "avg_tariff": 0.0, "avg_gdp_importer": 529694473501.79, "top_product_code": "180100", "top_product_value": 31858333.0, "top_product_kg": 11929456.7, "top_product_label": "180100"}, {"period": 2020, "Partner": "Canada", "export_value": 21338413.0, "export_kg": 8494966.9, "avg_tariff": 1.5, "avg_gdp_importer": 1655684730000.19, "top_product_code": "180100", "top_product_value": 21099390.0, "top_product_kg": 8457834.0, "top_product_label": "180100"}, {"period": 2020, "Partner": "China", "export_value": 9834090.0, "export_kg": 3999428.0, "avg_tariff": 7.5, "avg_gdp_importer": 14996414166715.1, "top_product_code": "180100", "top_product_value": 9774420.0, "top_product_kg": 3991472.0, "top_product_label": "180100"}, {"period": 2020, "Partner": "Colombia", "export_value": 5465079.0, "export_kg": 2312538.9, "avg_tariff": 2.5, "avg_gdp_importer": 270348342541.47, "top_product_code": "180500", "top_product_value": 5444517.0, "top_product_kg": 2310714.0, "top_product_label": "180500"}, {"period": 2020, "Partner": "Estonia", "export_value": 22200715.0, "export_kg": 9480880.0, "avg_tariff": 0.0, "avg_gdp_importer": 31820771493.9, "top_product_code": "180100", "top_product_value": 22200715.0, "top_product_kg": 9480880.0, "top_product_label": "180100"}, {"period": 2020, "Partner": "Germany", "export_value": 47925958.0, "export_kg": 16384306.6, "avg_tariff": 1.6, "avg_gdp_importer": 3941398957073.94, "top_product_code": "180100", "top_product_value": 38180310.0, "top_product_kg": 14529926.6, "top_product_label": "180100"}, {"period": 2020, "Partner": "Indonesia", "export_value": 193122230.0, "export_kg": 78148930.0, "avg_tariff": 0.0, "avg_gdp_importer": 1059054842698.48, "top_product_code": "180100", "top_product_value": 193122230.0, "top_product_kg": 78148930.0, "top_product_label": "180100"}, {"period": 2021, "Partner": "Algeria", "export_value": 1234597.0, "export_kg": 500250.0, "avg_tariff": 0.0, "avg_gdp_importer": 186231205262.08, "top_product_code": "180100", "top_product_value": 1234597.0, "top_product_kg": 500250.0, "top_product_label": "180100"}, {"period": 2021, "Partner": "Australia", "export_value": 585750.0, "export_kg": 160015.5, "avg_tariff": 0.0, "avg_gdp_importer": 1560617493202.6902, "top_product_code": "180500", "top_product_value": 345732.0, "top_product_kg": 103492.5, "top_product_label": "180500"}, {"period": 2021, "Partner": "Belgium", "export_value": 53387166.0, "export_kg": 20976021.700000003, "avg_tariff": 0.0, "avg_gdp_importer": 598522422241.85, "top_product_code": "180100", "top_product_value": 53381826.0, "top_product_kg": 20975614.1, "top_product_label": "180100"}, {"period": 2021, "Partner": "Bulgaria", "export_value": 1179054.0, "export_kg": 500358.0, "avg_tariff": 0.0, "avg_gdp_importer": 84374613233.36, "top_product_code": "180100", "top_product_value": 1179054.0, "top_product_kg": 500358.0, "top_product_label": "180100"}, {"period": 2021, "Partner": "Canada", "export_value": 26609124.0, "export_kg": 10729667.0, "avg_tariff": 1.5, "avg_gdp_importer": 2022378748423.23, "top_product_code": "180100", "top_product_value": 26444615.0, "top_product_kg": 10704094.0, "top_product_label": "180100"}, {"period": 2021, "Partner": "China", "export_value": 2606711.0, "export_kg": 1034670.0, "avg_tariff": 10.0, "avg_gdp_importer": 18201698719564.0, "top_product_code": "180100", "top_product_value": 2546388.0, "top_product_kg": 1022520.0, "top_product_label": "180100"}, {"period": 2021, "Partner": "Colombia", "export_value": 5546696.0, "export_kg": 2166853.0, "avg_tariff": 2.5, "avg_gdp_importer": 318524633225.4, "top_product_code": "180500", "top_product_value": 5489857.0, "top_product_kg": 2156513.0, "top_product_label": "180500"}, {"period": 2021, "Partner": "Estonia", "export_value": 10764802.0, "export_kg": 4492039.0, "avg_tariff": 0.0, "avg_gdp_importer": 37201101170.58, "top_product_code": "180100", "top_product_value": 10412802.0, "top_product_kg": 4352039.0, "top_product_label": "180100"}, {"period": 2021, "Partner": "Germany", "export_value": 46618647.0, "export_kg": 16707361.2, "avg_tariff": 2.0, "avg_gdp_importer": 4355251953410.78, "top_product_code": "180100", "top_product_value": 42149456.0, "top_product_kg": 15758463.0, "top_product_label": "180100"}, {"period": 2021, "Partner": "Indonesia", "export_value": 160022773.0, "export_kg": 65915440.0, "avg_tariff": 0.0, "avg_gdp_importer": 1186509691086.73, "top_product_code": "180100", "top_product_value": 160022773.0, "top_product_kg": 65915440.0, "top_product_label": "180100"}, {"period": 2022, "Partner": "Algeria", "export_value": 733259.0, "export_kg": 302400.0, "avg_tariff": 0.0, "avg_gdp_importer": 225581644702.57, "top_product_code": "180100", "top_product_value": 733259.0, "top_product_kg": 302400.0, "top_product_label": "180100"}, {"period": 2022, "Partner": "Australia", "export_value": 323793.0, "export_kg": 77765.4, "avg_tariff": 2.0, "avg_gdp_importer": 1695627535475.8, "top_product_code": "180500", "top_product_value": 125698.0, "top_product_kg": 34668.2, "top_product_label": "180500"}, {"period": 2022, "Partner": "Belgium", "export_value": 50387044.0, "export_kg": 21257387.900000002, "avg_tariff": 0.0, "avg_gdp_importer": 591085783326.27, "top_product_code": "180100", "top_product_value": 50386781.0, "top_product_kg": 21256811.8, "top_product_label": "180100"}, {"period": 2022, "Partner": "Bulgaria", "export_value": 215112.0, "export_kg": 100050.7, "avg_tariff": 0.0, "avg_gdp_importer": 90506153293.67, "top_product_code": "180100", "top_product_value": 215107.0, "top_product_kg": 100050.0, "top_product_label": "180100"}, {"period": 2022, "Partner": "Canada", "export_value": 45560080.0, "export_kg": 20225681.514, "avg_tariff": 1.5, "avg_gdp_importer": 2190411080134.32, "top_product_code": "180100", "top_product_value": 45295862.0, "top_product_kg": 20189593.0, "top_product_label": "180100"}, {"period": 2022, "Partner": "China", "export_value": 16043541.0, "export_kg": 6278007.0, "avg_tariff": 10.0, "avg_gdp_importer": 18316765021690.2, "top_product_code": "180100", "top_product_value": 15857011.0, "top_product_kg": 6232705.0, "top_product_label": "180100"}, {"period": 2022, "Partner": "Colombia", "export_value": 7186478.0, "export_kg": 2657108.3, "avg_tariff": 2.5, "avg_gdp_importer": 345632492851.45, "top_product_code": "180500", "top_product_value": 6905677.0, "top_product_kg": 2606207.0, "top_product_label": "180500"}, {"period": 2022, "Partner": "Estonia", "export_value": 5185011.0, "export_kg": 2221266.0, "avg_tariff": 0.0, "avg_gdp_importer": 38226641740.29, "top_product_code": "180100", "top_product_value": 4362621.0, "top_product_kg": 1981266.0, "top_product_label": "180100"}, {"period": 2022, "Partner": "Germany", "export_value": 42345514.0, "export_kg": 15659584.5, "avg_tariff": 1.6, "avg_gdp_importer": 4201021706478.62, "top_product_code": "180100", "top_product_value": 40813217.0, "top_product_kg": 15270357.0, "top_product_label": "180100"}, {"period": 2022, "Partner": "Indonesia", "export_value": 156892626.0, "export_kg": 70650535.0, "avg_tariff": 0.0, "avg_gdp_importer": 1319101183380.15, "top_product_code": "180100", "top_product_value": 156892626.0, "top_product_kg": 70650535.0, "top_product_label": "180100"}, {"period": 2023, "Partner": "Algeria", "export_value": 82600.0, "export_kg": 0.0, "avg_tariff": 15.0, "avg_gdp_importer": 247923887214.66, "top_product_code": "180400", "top_product_value": 76000.0, "top_product_kg": 0.0, "top_product_label": "180400"}, {"period": 2023, "Partner": "Australia", "export_value": 266182.0, "export_kg": 0.0, "avg_tariff": 0.0, "avg_gdp_importer": 1734451264655.6003, "top_product_code": "180100", "top_product_value": 192326.0, "top_product_kg": 0.0, "top_product_label": "180100"}, {"period": 2023, "Partner": "Belgium", "export_value": 40833085.0, "export_kg": 0.0, "avg_tariff": 0.0, "avg_gdp_importer": 651330595110.01, "top_product_code": "180100", "top_product_value": 40833085.0, "top_product_kg": 0.0, "top_product_label": "180100"}, {"period": 2023, "Partner": "Bulgaria", "export_value": 526663.0, "export_kg": 0.0, "avg_tariff": 0.0, "avg_gdp_importer": 102199231384.54, "top_product_code": "180100", "top_product_value": 526663.0, "top_product_kg": 0.0, "top_product_label": "180100"}, {"period": 2023, "Partner": "Canada", "export_value": 38035156.0, "export_kg": 0.0, "avg_tariff": 1.5, "avg_gdp_importer": 2173339670064.33, "top_product_code": "180100", "top_product_value": 37985238.0, "top_product_kg": 0.0, "top_product_label": "180100"}, {"period": 2023, "Partner": "China", "export_value": 15006315.0, "export_kg": 0.0, "avg_tariff": 7.5, "avg_gdp_importer": 18270356654533.2, "top_product_code": "180100", "top_product_value": 14960078.0, "top_product_kg": 0.0, "top_product_label": "180100"}, {"period": 2023, "Partner": "Colombia", "export_value": 3827219.0, "export_kg": 0.0, "avg_tariff": 2.5, "avg_gdp_importer": 366291836137.92, "top_product_code": "180500", "top_product_value": 3575507.0, "top_product_kg": 0.0, "top_product_label": "180500"}, {"period": 2023, "Partner": "Estonia", "export_value": 7022352.0, "export_kg": 0.0, "avg_tariff": 0.0, "avg_gdp_importer": 41470344395.11, "top_product_code": "180100", "top_product_value": 5097002.0, "top_product_kg": 0.0, "top_product_label": "180100"}, {"period": 2023, "Partner": "Germany", "export_value": 53966307.0, "export_kg": 0.0, "avg_tariff": 1.6, "avg_gdp_importer": 4562207532490.28, "top_product_code": "180100", "top_product_value": 50246688.0, "top_product_kg": 0.0, "top_product_label": "180100"}, {"period": 2023, "Partner": "Indonesia", "export_value": 203931617.0, "export_kg": 0.0, "avg_tariff": 0.0, "avg_gdp_importer": 1371169301563.62, "top_product_code": "180100", "top_product_value": 203931617.0, "top_product_kg": 0.0, "top_product_label": "180100"}, {"period": 2024, "Partner": "Algeria", "export_value": 6815692.0, "export_kg": 705600.0, "avg_tariff": 0.0, "avg_gdp_importer": 269322281664.77, "top_product_code": "180100", "top_product_value": 6815692.0, "top_product_kg": 705600.0, "top_product_label": "180100"}, {"period": 2024, "Partner": "Australia", "export_value": 440981.0, "export_kg": 56829.3, "avg_tariff": 2.0, "avg_gdp_importer": 1757022451652.83, "top_product_code": "180100", "top_product_value": 351235.0, "top_product_kg": 50341.0, "top_product_label": "180100"}, {"period": 2024, "Partner": "Belgium", "export_value": 351552493.0, "export_kg": 42439116.1, "avg_tariff": 4.0, "avg_gdp_importer": 671370081636.41, "top_product_code": "180100", "top_product_value": 351539802.0, "top_product_kg": 42438444.7, "top_product_label": "180100"}, {"period": 2024, "Partner": "Bulgaria", "export_value": 11581983.0, "export_kg": 1325840.0, "avg_tariff": 0.0, "avg_gdp_importer": 113343355779.99, "top_product_code": "180100", "top_product_value": 11581983.0, "top_product_kg": 1325840.0, "top_product_label": "180100"}, {"period": 2024, "Partner": "Canada", "export_value": 84192426.0, "export_kg": 11177600.0, "avg_tariff": 0.0, "avg_gdp_importer": 2243636826633.76, "top_product_code": "180100", "top_product_value": 84143199.0, "top_product_kg": 11173600.0, "top_product_label": "180100"}, {"period": 2024, "Partner": "China", "export_value": 10047322.0, "export_kg": 1441241.0, "avg_tariff": 3.75, "avg_gdp_importer": 18743803170827.2, "top_product_code": "180100", "top_product_value": 9880976.0, "top_product_kg": 1427490.0, "top_product_label": "180100"}, {"period": 2024, "Partner": "Colombia", "export_value": 8941986.0, "export_kg": 1766133.0, "avg_tariff": 2.5, "avg_gdp_importer": 418818154879.27, "top_product_code": "180500", "top_product_value": 6811628.0, "top_product_kg": 1519898.1, "top_product_label": "180500"}, {"period": 2024, "Partner": "Estonia", "export_value": 23943751.0, "export_kg": 3379000.0, "avg_tariff": 0.0, "avg_gdp_importer": 43130419829.35, "top_product_code": "180100", "top_product_value": 23700001.0, "top_product_kg": 3304000.0, "top_product_label": "180100"}, {"period": 2024, "Partner": "Germany", "export_value": 333554294.0, "export_kg": 38117700.3, "avg_tariff": 1.6, "avg_gdp_importer": 4685592577804.69, "top_product_code": "180100", "top_product_value": 325878854.0, "top_product_kg": 37608703.9, "top_product_label": "180100"}, {"period": 2024, "Partner": "Indonesia", "export_value": 436858452.0, "export_kg": 61453800.0, "avg_tariff": 0.0, "avg_gdp_importer": 1396300098190.97, "top_product_code": "180100", "top_product_value": 436855452.0, "top_product_kg": 61453400.0, "top_product_label": "180100"}], "countryTotal": [{"Partner": "Indonesia", "export_value": 1591997319.0, "export_kg": 469128405.0}, {"Partner": "Germany", "export_value": 739489359.0, "export_kg": 160183952.68}, {"Partner": "Belgium", "export_value": 649352999.0, "export_kg": 145274867.57}, {"Partner": "Canada", "export_value": 315169498.0, "export_kg": 90476157.914}, {"Partner": "China", "export_value": 146103484.0, "export_kg": 55575864.4}, {"Partner": "Estonia", "export_value": 126577264.0, "export_kg": 44052506.0}, {"Partner": "Colombia", "export_value": 76992441.0, "export_kg": 27042862.31}, {"Partner": "Bulgaria", "export_value": 13688596.0, "export_kg": 1971793.7}, {"Partner": "Algeria", "export_value": 12665485.0, "export_kg": 3109188.0}, {"Partner": "Australia", "export_value": 4013051.0, "export_kg": 901032.11}], "product": [{"period": 2015, "product_code": "180100", "export_value": 158450384.0, "export_kg": 52127309.0}, {"period": 2015, "product_code": "180400", "export_value": 867436.0, "export_kg": 182052.0}, {"period": 2015, "product_code": "180500", "export_value": 4555983.0, "export_kg": 1590541.0}, {"period": 2015, "product_code": "180610", "export_value": 37769.0, "export_kg": 10485.0}, {"period": 2015, "product_code": "180632", "export_value": 835474.0, "export_kg": 1020.47}, {"period": 2016, "product_code": "180100", "export_value": 150850702.0, "export_kg": 58233815.0}, {"period": 2016, "product_code": "180400", "export_value": 8417615.0, "export_kg": 1366458.0}, {"period": 2016, "product_code": "180500", "export_value": 4225813.0, "export_kg": 1650029.0}, {"period": 2016, "product_code": "180610", "export_value": 6322.0, "export_kg": 1767.0}, {"period": 2016, "product_code": "180632", "export_value": 347920.0, "export_kg": 632.09}, {"period": 2017, "product_code": "180100", "export_value": 179760830.0, "export_kg": 89454751.2}, {"period": 2017, "product_code": "180400", "export_value": 15267165.0, "export_kg": 2941246.0}, {"period": 2017, "product_code": "180500", "export_value": 4859775.0, "export_kg": 2553775.0}, {"period": 2017, "product_code": "180610", "export_value": 47349.0, "export_kg": 16540.7}, {"period": 2017, "product_code": "180632", "export_value": 347138.0, "export_kg": 56891.299999999996}, {"period": 2018, "product_code": "180100", "export_value": 250531584.0, "export_kg": 113400170.5}, {"period": 2018, "product_code": "180400", "export_value": 15492434.0, "export_kg": 2655934.0999999996}, {"period": 2018, "product_code": "180500", "export_value": 5967669.0, "export_kg": 2596712.5999999996}, {"period": 2018, "product_code": "180610", "export_value": 11591.0, "export_kg": 40497.5}, {"period": 2018, "product_code": "180632", "export_value": 439726.0, "export_kg": 24860.809999999998}, {"period": 2019, "product_code": "180100", "export_value": 262099202.0, "export_kg": 108862878.3}, {"period": 2019, "product_code": "180400", "export_value": 8974162.0, "export_kg": 1578264.8}, {"period": 2019, "product_code": "180500", "export_value": 6187401.0, "export_kg": 2924317.9}, {"period": 2019, "product_code": "180610", "export_value": 9771.0, "export_kg": 10895.8}, {"period": 2019, "product_code": "180632", "export_value": 360092.0, "export_kg": 66736.0}, {"period": 2020, "product_code": "180100", "export_value": 316344965.0, "export_kg": 126576115.3}, {"period": 2020, "product_code": "180400", "export_value": 9812249.0, "export_kg": 1865354.4}, {"period": 2020, "product_code": "180500", "export_value": 5930804.0, "export_kg": 2437003.0}, {"period": 2020, "product_code": "180610", "export_value": 3757.0, "export_kg": 562.8}, {"period": 2020, "product_code": "180632", "export_value": 151760.0, "export_kg": 13691.7}, {"period": 2021, "product_code": "180100", "export_value": 297610768.0, "export_kg": 119792035.1}, {"period": 2021, "product_code": "180400", "export_value": 4718352.0, "export_kg": 1000673.8}, {"period": 2021, "product_code": "180500", "export_value": 6142602.0, "export_kg": 2385131.3}, {"period": 2021, "product_code": "180610", "export_value": 2883.0, "export_kg": 205.0}, {"period": 2021, "product_code": "180632", "export_value": 80715.0, "export_kg": 4630.2}, {"period": 2022, "product_code": "180100", "export_value": 314790667.0, "export_kg": 136061868.2}, {"period": 2022, "product_code": "180400", "export_value": 2267977.0, "export_kg": 554327.4}, {"period": 2022, "product_code": "180500", "export_value": 7489446.0, "export_kg": 2799027.0}, {"period": 2022, "product_code": "180610", "export_value": 14580.0, "export_kg": 1108.3}, {"period": 2022, "product_code": "180632", "export_value": 309788.0, "export_kg": 13455.414}, {"period": 2023, "product_code": "180100", "export_value": 353821575.0, "export_kg": 0.0}, {"period": 2023, "product_code": "180400", "export_value": 5711876.0, "export_kg": 0.0}, {"period": 2023, "product_code": "180500", "export_value": 3676110.0, "export_kg": 0.0}, {"period": 2023, "product_code": "180610", "export_value": 32881.0, "export_kg": 0.0}, {"period": 2023, "product_code": "180632", "export_value": 255054.0, "export_kg": 0.0}, {"period": 2024, "product_code": "180100", "export_value": 1252611532.0, "export_kg": 159725469.6}, {"period": 2024, "product_code": "180400", "export_value": 7699340.0, "export_kg": 507694.0}, {"period": 2024, "product_code": "180500", "export_value": 7312996.0, "export_kg": 1620162.7000000002}, {"period": 2024, "product_code": "180610", "export_value": 23785.0, "export_kg": 1409.6999999999998}, {"period": 2024, "product_code": "180632", "export_value": 281727.0, "export_kg": 8123.7}], "productLabels": {}, "productTotal": [{"product_code": "180100", "export_value": 3536872209.0}, {"product_code": "180400", "export_value": 79228606.0}, {"product_code": "180500", "export_value": 56348599.0}, {"product_code": "180632", "export_value": 3409394.0}, {"product_code": "180610", "export_value": 190688.0}], "coords": {"Ecuador": [-1.8312, -78.1834], "Germany": [51.1657, 10.4515], "Colombia": [4.5709, -74.2973], "Canada": [56.1304, -106.3468], "Australia": [-25.2744, 133.7751], "China": [35.8617, 104.1954], "Belgium": [50.5039, 4.4699], "Estonia": [58.5953, 25.0136], "Bulgaria": [42.7339, 25.4858], "Indonesia": [-0.7893, 113.9213], "Algeria": [28.0339, 1.6596]}, "kpis": {"totalValue": 3676049496.0, "totalKg": 997716629.684, "topMarket": "Indonesia", "topMarketValue": 1591997319.0, "topProduct": "180100", "topProductValue": 3536872209.0, "startYear": 2015, "endYear": 2024}};
+
+const PRODUCT_LABELS = {"180100":"Cocoa beans: whole or broken, raw or roasted","180400":"Cocoa: butter, fat and oil","180500":"Cocoa: powder, not containing added sugar or other sweetening matter","180610":"Cocoa: powder, containing added sugar or other sweetening matter","180632":"Chocolate and other food preparations containing cocoa: in blocks, slabs or bars, (not filled), weighing 2kg or less"};
+
+const RAW_TRADE_ROWS = [["180632",2024,"Australia",5928.0,252.0,5.0,1757022451652.83,4600.0,21.55636363636363],["180632",2022,"Australia",12335.0,450.4,5.0,1695627535475.8,2510.0,27.41111111111111],["180632",2020,"Australia",2731.0,102.0,5.0,1333336461648.09,2370.0,26.77450980392157],["180632",2018,"Australia",18227.0,2.21,5.0,1433144978761.67,2290.0,9113.5],["180632",2015,"Australia",13002.0,382.0,5.0,1356805839935.9,3130.0,34.03664921465968],["180632",2024,"Belgium",12691.0,671.4,8.0,671370081636.41,4600.0,17.24320652173913],["180632",2015,"Belgium",525346.0,13.47,8.0,461044767544.53,3130.0,40411.23076923077],["180632",2023,"Canada",11334.0,0.0,6.0,2173339670064.33,3770.0,null],["180632",2022,"Canada",78858.0,13.514,6.0,2190411080134.32,2510.0,5835.281929850526],["180632",2021,"Canada",3678.0,111.0,6.0,2022378748423.23,2400.0,33.13513513513514],["180632",2020,"Canada",60061.0,3594.2,6.0,1655684730000.19,2370.0,15015.25],["180632",2019,"Canada",155949.0,8916.8,6.0,1743725183672.52,2340.0,17327.66666666667],["180632",2018,"Canada",258697.0,15254.5,6.0,1725329192783.02,2290.0,17246.46666666667],["180632",2017,"Canada",52065.0,4168.4,6.0,1649265644244.1,2030.0,10413.0],["180632",2016,"Canada",8156.0,544.0,6.0,1527994741907.43,2890.0,14.99264705882353],["180632",2015,"Canada",9725.0,577.0,6.0,1556508816217.14,3130.0,16.85441941074523],["180632",2024,"China",6582.0,36.0,15.0,18743803170827.2,4600.0,28.86842105263158],["180632",2023,"China",8391.0,0.0,15.0,18270356654533.2,3770.0,null],["180632",2019,"China",5143.0,46165.0,15.0,14560167101283.4,2340.0,214.2916666666667],["180632",2018,"China",12694.0,388.9,15.0,14147765772963.8,2290.0,32.63239074550128],["180632",2016,"China",6220.0,40.0,15.0,11456024084962.0,2890.0,155.5],["180632",2024,"Colombia",243171.0,6783.1,10.0,418818154879.27,4600.0,27019.0],["180632",2023,"Colombia",186048.0,0.0,10.0,366291836137.92,3770.0,null],["180632",2022,"Colombia",149552.0,4837.2,10.0,345632492851.45,2510.0,30918.33781269382],["180632",2021,"Colombia",29105.0,1.0,10.0,318524633225.4,2400.0,29105.0],["180632",2020,"Colombia",13722.0,621.0,10.0,270348342541.47,2370.0,22.09661835748792],["180632",2019,"Colombia",99344.0,3791.4,10.0,323031701192.84,2340.0,24836.0],["180632",2018,"Colombia",106526.0,4449.1,10.0,334198218098.28,2290.0,26631.5],["180632",2017,"Colombia",249133.0,48751.7,10.0,311866875156.88,2030.0,4448.803571428572],["180632",2016,"Colombia",279821.0,43.11,10.0,282720100286.23,2890.0,6507.46511627907],["180632",2015,"Colombia",165511.0,19.0,10.0,293492370193.17,3130.0,8711.105263157895],["180632",2024,"Germany",13355.0,381.2,8.0,4685592577804.69,4600.0,35.14473684210526],["180632",2023,"Germany",49281.0,0.0,8.0,4562207532490.28,3770.0,null],["180632",2022,"Germany",69043.0,8154.3,8.0,4201021706478.62,2510.0,8467.37797400049],["180632",2021,"Germany",47932.0,4518.2,8.0,4355251953410.78,2400.0,9586.4],["180632",2020,"Germany",75246.0,9374.5,8.0,3941398957073.94,2370.0,8360.666666666666],["180632",2019,"Germany",99656.0,7862.8,8.0,3959894794039.21,2340.0,12674.04298613761],["180632",2018,"Germany",43582.0,4766.1,8.0,4055433215301.96,2290.0,8716.4],["180632",2017,"Germany",45940.0,3971.2,8.0,3765351626105.89,2030.0,11485.0],["180632",2016,"Germany",53723.0,4.98,8.0,3536787895179.0,2890.0,10744.6],["180632",2015,"Germany",121890.0,29.0,8.0,3425099578746.09,3130.0,4203.103448275862],["180610",2024,"Australia",0.0,0.3,5.0,1757022451652.83,4600.0,null],["180610",2024,"Colombia",22849.0,1401.8,0.0,418818154879.27,4600.0,12.31088362068965],["180610",2024,"Germany",936.0,7.6,0.0,4685592577804.69,4600.0,117.0],["180610",2023,"Colombia",23386.0,0.0,0.0,366291836137.92,3770.0,null],["180610",2023,"Germany",9495.0,0.0,0.0,4562207532490.28,3770.0,null],["180610",2022,"Australia",223.0,21.0,5.0,1695627535475.8,2510.0,10.61904761904762],["180610",2022,"Colombia",14035.0,1034.1,0.0,345632492851.45,2510.0,13.57350096711799],["180610",2022,"Germany",322.0,53.2,0.0,4201021706478.62,2510.0,6.075471698113208],["180610",2021,"Colombia",2883.0,205.0,0.0,318524633225.4,2400.0,14.06341463414634],["180610",2020,"Australia",0.0,0.4,5.0,1333336461648.09,2370.0,null],["180610",2020,"Belgium",1680.0,300.0,0.0,529694473501.79,2370.0,5.6],["180610",2020,"Colombia",1740.0,203.9,0.0,270348342541.47,2370.0,8.529411764705882],["180610",2020,"Germany",337.0,58.5,0.0,3941398957073.94,2370.0,5.711864406779661],["180610",2019,"China",556.0,142.0,8.0,14560167101283.4,2340.0,3.915492957746479],["180610",2019,"Colombia",8405.0,10633.8,0.0,323031701192.84,2340.0,0.7903893172841828],["180610",2019,"Germany",810.0,120.0,0.0,3959894794039.21,2340.0,6.75],["180610",2018,"Colombia",11523.0,40483.2,0.0,334198218098.28,2290.0,0.2846379961959341],["180610",2018,"Germany",68.0,14.3,0.0,4055433215301.96,2290.0,4.857142857142857],["180610",2017,"Colombia",47349.0,16540.3,0.0,311866875156.88,2030.0,2.825962399283796],["180610",2017,"Germany",0.0,0.4,0.0,3765351626105.89,2030.0,0.0],["180610",2016,"Colombia",6312.0,1765.0,0.0,282720100286.23,2890.0,3.576203966005666],["180610",2016,"Germany",10.0,2.0,8.0,3536787895179.0,2890.0,5.0],["180610",2015,"Colombia",37758.0,10482.0,0.0,293492370193.17,3130.0,3.602175157412708],["180610",2015,"Germany",11.0,3.0,8.0,3425099578746.09,3130.0,3.666666666666667],["180500",2024,"Australia",18253.0,3442.0,0.0,1757022451652.83,4600.0,4.943932827735645],["180500",2024,"China",148014.0,13215.0,0.0,18743803170827.2,4600.0,10.28875295426109],["180500",2024,"Colombia",6811628.0,1519898.1,0.0,418818154879.27,4600.0,4.410976237578882],["180500",2024,"Estonia",243750.0,75000.0,0.0,43130419829.35,4600.0,3.202601497832085],["180500",2024,"Germany",91351.0,8607.6,0.0,4685592577804.69,4600.0,9.803713243185232],["180500",2023,"Australia",12869.0,0.0,0.0,1734451264655.6,3770.0,null],["180500",2023,"Canada",29750.0,0.0,0.0,2173339670064.33,3770.0,null],["180500",2023,"China",34716.0,0.0,0.0,18270356654533.2,3770.0,null],["180500",2023,"Colombia",3575507.0,0.0,0.0,366291836137.92,3770.0,null],["180500",2023,"Germany",23268.0,0.0,0.0,4562207532490.28,3770.0,null],["180500",2022,"Australia",125698.0,34668.2,0.0,1695627535475.8,2510.0,3.625764393677166],["180500",2022,"Belgium",263.0,576.1,0.0,591085783326.27,2510.0,0.4565972222222222],["180500",2022,"Bulgaria",5.0,0.7,0.0,90506153293.67,2510.0,5.0],["180500",2022,"Canada",42778.0,12050.0,0.0,2190411080134.32,2510.0,3.550041493775934],["180500",2022,"China",160894.0,42500.0,15.0,18316765021690.2,2510.0,3.785741176470588],["180500",2022,"Colombia",6905677.0,2606207.0,0.0,345632492851.45,2510.0,2.649703956746337],["180500",2022,"Estonia",225000.0,100000.0,0.0,38226641740.29,2510.0,2.25],["180500",2022,"Germany",29131.0,3025.0,0.0,4201021706478.62,2510.0,9.6300826446281],["180500",2021,"Australia",345732.0,103492.5,0.0,1560617493202.69,2400.0,3.340631733547196],["180500",2021,"Belgium",900.0,120.8,0.0,598522422241.85,2400.0,7.43801652892562],["180500",2021,"Canada",57819.0,12612.0,0.0,2022378748423.23,2400.0,4.584443387250237],["180500",2021,"China",47099.0,10098.0,15.0,18201698719564.0,2400.0,4.664190928896812],["180500",2021,"Colombia",5489857.0,2156513.0,0.0,318524633225.4,2400.0,2.545710134833409],["180500",2021,"Estonia",180000.0,100000.0,0.0,37201101170.58,2400.0,1.8],["180500",2021,"Germany",21195.0,2295.0,0.0,4355251953410.78,2400.0,9.235294117647058],["180500",2020,"Australia",263498.0,78973.0,0.0,1333336461648.09,2370.0,3.336558064148507],["180500",2020,"Belgium",80455.0,19756.8,0.0,529694473501.79,2370.0,4.072227564913701],["180500",2020,"Canada",59322.0,15793.2,0.0,1655684730000.19,2370.0,3.756221110618629],["180500",2020,"China",59670.0,7956.0,15.0,14996414166715.1,2370.0,7.5],["180500",2020,"Colombia",5444517.0,2310714.0,0.0,270348342541.47,2370.0,2.356205484538545],["180500",2020,"Germany",23342.0,3810.0,0.0,3941398957073.94,2370.0,6.126509186351706],["180500",2019,"Australia",292930.0,92020.0,0.0,1398349602956.35,2340.0,3.183329710932406],["180500",2019,"Belgium",1323.0,2577.9,0.0,536726344405.49,2340.0,0.5131885182311869],["180500",2019,"Canada",22287.0,7683.0,0.0,1743725183672.52,2340.0,2.90081999219055],["180500",2019,"China",33337.0,5072.0,15.0,14560167101283.4,2340.0,6.572752365930599],["180500",2019,"Colombia",5837069.0,2816895.0,0.0,323031701192.84,2340.0,2.072164209173576],["180500",2019,"Germany",455.0,70.0,0.0,3959894794039.21,2340.0,6.5],["180500",2018,"Australia",319329.0,93367.2,0.0,1433144978761.67,2290.0,3.420148446453243],["180500",2018,"Belgium",21049.0,6120.1,0.0,542638913427.92,2290.0,3.43937908496732],["180500",2018,"Bulgaria",32380.0,11500.0,0.0,66097226262.22,2290.0,2.815652173913044],["180500",2018,"Canada",112176.0,34032.0,0.0,1725329192783.02,2290.0,3.296191819464034],["180500",2018,"China",12960.0,1728.0,15.0,14147765772963.8,2290.0,7.5],["180500",2018,"Colombia",5437054.0,2442680.0,0.0,334198218098.28,2290.0,2.225856026986752],["180500",2018,"Germany",32721.0,7285.3,0.0,4055433215301.96,2290.0,4.49155799588195],["180500",2017,"Australia",162632.0,33731.0,0.0,1330890554614.09,2030.0,5.009302039056243],["180500",2017,"Belgium",56979.0,20054.2,0.0,500908767351.53,2030.0,2.779327837666455],["180500",2017,"Bulgaria",300.0,100.0,0.0,59167647387.61,2030.0,2.97029702970297],["180500",2017,"Canada",6177.0,2008.2,0.0,1649265644244.1,2030.0,3.038366945400885],["180500",2017,"China",751812.0,401575.0,15.0,12537559062282.9,2030.0,1.848680149996926],["180500",2017,"Colombia",3860750.0,2089796.0,0.0,311866875156.88,2030.0,1.820295368059645],["180500",2017,"Germany",21125.0,6510.6,0.0,3765351626105.89,2030.0,3.178603671381282],["180500",2016,"Australia",70284.0,19106.0,0.0,1211588128417.61,2890.0,3.67863498377473],["180500",2016,"Canada",40124.0,8088.0,0.0,1527994741907.43,2890.0,4.960929772502473],["180500",2016,"China",743.0,99.0,15.0,11456024084962.0,2890.0,7.505050505050505],["180500",2016,"Colombia",4114601.0,1622732.0,0.0,282720100286.23,2890.0,2.53560107275878],["180500",2016,"Germany",61.0,4.0,0.0,3536787895179.0,2890.0,15.25],["180500",2015,"Australia",23214.0,6507.0,0.0,1356805839935.9,3130.0,3.567542646380821],["180500",2015,"Canada",76160.0,9249.0,0.0,1556508816217.14,3130.0,8.234403719321008],["180500",2015,"Colombia",4456284.0,1574727.0,0.0,293492370193.17,3130.0,2.829877178710976],["180500",2015,"Germany",325.0,58.0,0.0,3425099578746.09,3130.0,5.603448275862069],["180400",2024,"Australia",65565.0,2794.0,0.0,1757022451652.83,4600.0,22.63203313772868],["180400",2024,"Canada",49227.0,4000.0,0.0,2243636826633.76,4600.0,12.06544117647059],["180400",2024,"China",11750.0,500.0,0.0,18743803170827.2,4600.0,22.94921875],["180400",2024,"Germany",7569798.0,500000.0,0.0,4685592577804.69,4600.0,14.76826280015295],["180400",2024,"Indonesia",3000.0,400.0,0.0,1396300098190.97,4600.0,7.5],["180400",2023,"Algeria",76000.0,0.0,30.0,247923887214.66,3770.0,null],["180400",2023,"Australia",60987.0,0.0,0.0,1734451264655.6,3770.0,null],["180400",2023,"Canada",8834.0,0.0,0.0,2173339670064.33,3770.0,null],["180400",2023,"China",3130.0,0.0,15.0,18270356654533.2,3770.0,null],["180400",2023,"Estonia",1925350.0,0.0,0.0,41470344395.11,3770.0,null],["180400",2023,"Germany",3637575.0,0.0,0.0,4562207532490.28,3770.0,null],["180400",2022,"Australia",68568.0,9505.4,0.0,1695627535475.8,2510.0,7.213887427669648],["180400",2022,"Canada",142582.0,24025.0,0.0,2190411080134.32,2510.0,5.934734651404787],["180400",2022,"China",25636.0,2802.0,15.0,18316765021690.2,2510.0,9.149179157744468],["180400",2022,"Estonia",597390.0,140000.0,0.0,38226641740.29,2510.0,4.267071428571429],["180400",2022,"Germany",1433801.0,377995.0,0.0,4201021706478.62,2510.0,3.793174512890382],["180400",2021,"Australia",25612.0,3400.0,0.0,1560617493202.69,2400.0,7.532941176470588],["180400",2021,"Belgium",4440.0,286.8,0.0,598522422241.85,2400.0,15.47038327526132],["180400",2021,"Canada",103012.0,12850.0,0.0,2022378748423.23,2400.0,8.016498054474708],["180400",2021,"China",13224.0,2052.0,15.0,18201698719564.0,2400.0,6.444444444444445],["180400",2021,"Estonia",172000.0,40000.0,0.0,37201101170.58,2400.0,4.3],["180400",2021,"Germany",4400064.0,942085.0,0.0,4355251953410.78,2400.0,4.670559450580361],["180400",2020,"Australia",38950.0,5270.0,0.0,1333336461648.09,2370.0,7.39089184060721],["180400",2020,"Belgium",1836.0,201.9,0.0,529694473501.79,2370.0,9.089108910891088],["180400",2020,"Canada",119640.0,17745.5,0.0,1655684730000.19,2370.0,6.741800969232503],["180400",2020,"Colombia",5100.0,1000.0,0.0,270348342541.47,2370.0,5.1],["180400",2020,"Germany",9646723.0,1841137.0,0.0,3941398957073.94,2370.0,5.239546541077606],["180400",2019,"Australia",29420.0,4100.0,0.0,1398349602956.35,2340.0,7.175609756097561],["180400",2019,"Belgium",9243.0,1249.3,0.0,536726344405.49,2340.0,7.400320256204964],["180400",2019,"Bulgaria",10557.0,1850.0,0.0,68507731353.91,2340.0,5.706486486486487],["180400",2019,"Canada",149833.0,20953.0,0.0,1743725183672.52,2340.0,7.150909177683387],["180400",2019,"Germany",8775109.0,1550112.5,0.0,3959894794039.21,2340.0,5.660947943795065],["180400",2018,"Australia",178089.0,25562.5,0.0,1433144978761.67,2290.0,6.96667057857059],["180400",2018,"Belgium",72235.0,12302.5,0.0,542638913427.92,2290.0,5.871809461876118],["180400",2018,"Bulgaria",77692.0,10500.0,0.0,66097226262.22,2290.0,7.399238095238095],["180400",2018,"Canada",226322.0,24236.3,0.0,1725329192783.02,2290.0,9.338257138141607],["180400",2018,"Colombia",19500.0,3000.0,0.0,334198218098.28,2290.0,6.5],["180400",2018,"Germany",14918596.0,2580332.8,0.0,4055433215301.96,2290.0,5.781655313480857],["180400",2017,"Australia",164691.0,20854.6,0.0,1330890554614.09,2030.0,8.319828239454408],["180400",2017,"Belgium",60778.0,12099.4,0.0,500908767351.53,2030.0,4.820590101522843],["180400",2017,"Bulgaria",2100.0,300.0,0.0,59167647387.61,2030.0,6.840390879478828],["180400",2017,"Canada",72429.0,6748.4,0.0,1649265644244.1,2030.0,12.0333942515368],["180400",2017,"Colombia",5371.0,1016.5,0.0,311866875156.88,2030.0,5.090995260663507],["180400",2017,"Germany",14961796.0,2900227.1,0.0,3765351626105.89,2030.0,5.039526907203334],["180400",2016,"Australia",121591.0,14847.0,0.0,1211588128417.61,2890.0,8.189600592712333],["180400",2016,"Bulgaria",3040.0,400.0,0.0,53929397039.21,2890.0,7.6],["180400",2016,"Canada",123386.0,11009.0,0.0,1527994741907.43,2890.0,11.20773912253611],["180400",2016,"Germany",8169598.0,1340202.0,0.0,3536787895179.0,2890.0,6.095796006870606],["180400",2015,"Australia",125746.0,13386.0,0.0,1356805839935.9,3130.0,9.393844314955924],["180400",2015,"Bulgaria",2000.0,250.0,0.0,50765918159.15,3130.0,8.0],["180400",2015,"Canada",70959.0,6188.0,0.0,1556508816217.14,3130.0,11.46719457013575],["180400",2015,"Germany",668731.0,162228.0,0.0,3425099578746.09,3130.0,4.122167566634613],["180100",2024,"Algeria",6815692.0,705600.0,0.0,269322281664.77,4600.0,9.641527209970151],["180100",2024,"Australia",351235.0,50341.0,0.0,1757022451652.83,4600.0,6.925663018830721],["180100",2024,"Belgium",351539802.0,42438444.7,0.0,671370081636.41,4600.0,8.264139528957417],["180100",2024,"Bulgaria",11581983.0,1325840.0,0.0,113343355779.99,4600.0,8.673953387355272],["180100",2024,"Canada",84143199.0,11173600.0,0.0,2243636826633.76,4600.0,7.498992834607775],["180100",2024,"China",9880976.0,1427490.0,0.0,18743803170827.2,4600.0,6.871858069810625],["180100",2024,"Colombia",1864338.0,238050.0,0.0,418818154879.27,4600.0,7.814702726266725],["180100",2024,"Estonia",23700001.0,3304000.0,0.0,43130419829.35,4600.0,7.144989312664116],["180100",2024,"Germany",325878854.0,37608703.9,0.0,4685592577804.69,4600.0,8.647461793331942],["180100",2024,"Indonesia",436855452.0,61453400.0,0.0,1396300098190.97,4600.0,7.088196146769342],["180100",2023,"Algeria",6600.0,0.0,0.0,247923887214.66,3770.0,null],["180100",2023,"Australia",192326.0,0.0,0.0,1734451264655.6,3770.0,null],["180100",2023,"Belgium",40833085.0,0.0,0.0,651330595110.01,3770.0,null],["180100",2023,"Bulgaria",526663.0,0.0,0.0,102199231384.54,3770.0,null],["180100",2023,"Canada",37985238.0,0.0,0.0,2173339670064.33,3770.0,null],["180100",2023,"China",14960078.0,0.0,0.0,18270356654533.2,3770.0,null],["180100",2023,"Colombia",42278.0,0.0,0.0,366291836137.92,3770.0,null],["180100",2023,"Estonia",5097002.0,0.0,0.0,41470344395.11,3770.0,null],["180100",2023,"Germany",50246688.0,0.0,0.0,4562207532490.28,3770.0,null],["180100",2023,"Indonesia",203931617.0,0.0,0.0,1371169301563.62,3770.0,null],["180100",2022,"Algeria",733259.0,302400.0,0.0,225581644702.57,2510.0,2.424798280423281],["180100",2022,"Australia",116969.0,33120.4,0.0,1695627535475.8,2510.0,3.53167270531401],["180100",2022,"Belgium",50386781.0,21256811.8,0.0,591085783326.27,2510.0,2.370382774237266],["180100",2022,"Bulgaria",215107.0,100050.0,0.0,90506153293.67,2510.0,2.149995002498751],["180100",2022,"Canada",45295862.0,20189593.0,0.0,2190411080134.32,2510.0,2.243525265714866],["180100",2022,"China",15857011.0,6232705.0,0.0,18316765021690.2,2510.0,2.544161964989519],["180100",2022,"Colombia",117214.0,45030.0,0.0,345632492851.45,2510.0,2.603020208749722],["180100",2022,"Estonia",4362621.0,1981266.0,0.0,38226641740.29,2510.0,2.201936034838331],["180100",2022,"Germany",40813217.0,15270357.0,0.0,4201021706478.62,2510.0,2.672708765093049],["180100",2022,"Indonesia",156892626.0,70650535.0,0.0,1319101183380.15,2510.0,2.220685604150061],["180100",2021,"Algeria",1234597.0,500250.0,0.0,186231205262.08,2400.0,2.467960019990005],["180100",2021,"Australia",214406.0,53123.0,0.0,1560617493202.69,2400.0,4.036029591702276],["180100",2021,"Belgium",53381826.0,20975614.1,0.0,598522422241.85,2400.0,2.544947003696769],["180100",2021,"Bulgaria",1179054.0,500358.0,0.0,84374613233.36,2400.0,2.356420802705263],["180100",2021,"Canada",26444615.0,10704094.0,0.0,2022378748423.23,2400.0,2.470514085545213],["180100",2021,"China",2546388.0,1022520.0,0.0,18201698719564.0,2400.0,2.490306302077221],["180100",2021,"Colombia",24851.0,10134.0,0.0,318524633225.4,2400.0,2.452239984211565],["180100",2021,"Estonia",10412802.0,4352039.0,0.0,37201101170.58,2400.0,2.392626077110063],["180100",2021,"Germany",42149456.0,15758463.0,0.0,4355251953410.78,2400.0,2.674718720981862],["180100",2021,"Indonesia",160022773.0,65915440.0,0.0,1186509691086.73,2400.0,2.427697865629054],["180100",2020,"Australia",109567.0,37616.0,0.0,1333336461648.09,2370.0,2.912776478094428],["180100",2020,"Belgium",31858333.0,11929456.7,0.0,529694473501.79,2370.0,2.67056019398033],["180100",2020,"Canada",21099390.0,8457834.0,0.0,1655684730000.19,2370.0,2.494656433313777],["180100",2020,"China",9774420.0,3991472.0,0.0,14996414166715.1,2370.0,2.448825896812003],["180100",2020,"Estonia",22200715.0,9480880.0,0.0,31820771493.9,2370.0,2.341630207322527],["180100",2020,"Germany",38180310.0,14529926.6,0.0,3941398957073.94,2370.0,2.627701433049182],["180100",2020,"Indonesia",193122230.0,78148930.0,0.0,1059054842698.48,2370.0,2.471207603226302],["180100",2019,"Algeria",2456355.0,1000776.0,0.0,193459662090.68,2340.0,2.454450346531092],["180100",2019,"Australia",60028.0,25816.0,0.0,1398349602956.35,2340.0,2.325224666873257],["180100",2019,"Belgium",21059364.0,8461636.3,0.0,536726344405.49,2340.0,2.488805238135982],["180100",2019,"Bulgaria",16179.0,6003.0,0.0,68507731353.91,2340.0,2.695152423788106],["180100",2019,"Canada",10748905.0,4675517.0,0.0,1743725183672.52,2340.0,2.298976776258112],["180100",2019,"China",12948022.0,5649867.5,0.0,14560167101283.4,2340.0,2.291738851243958],["180100",2019,"Colombia",74954.0,30216.0,0.0,323031701192.84,2340.0,2.480606301297326],["180100",2019,"Estonia",11657038.0,4867194.0,0.0,31873748770.03,2340.0,2.395022265395626],["180100",2019,"Germany",34267670.0,13565872.5,0.0,3959894794039.21,2340.0,2.526020256860727],["180100",2019,"Indonesia",168810687.0,70579980.0,0.0,1119099871350.2,2340.0,2.391764449352352],["180100",2018,"Australia",93454.0,41674.0,0.0,1433144978761.67,2290.0,2.242501319767721],["180100",2018,"Belgium",24096700.0,10228947.9,0.0,542638913427.92,2290.0,2.355735897767786],["180100",2018,"Bulgaria",12414.0,3001.0,0.0,66097226262.22,2290.0,4.136621126291236],["180100",2018,"Canada",17661036.0,8628503.2,0.0,1725329192783.02,2290.0,2.046825040218448],["180100",2018,"China",33668051.0,14850560.0,0.0,14147765772963.8,2290.0,2.267123327335804],["180100",2018,"Colombia",71579.0,30000.0,0.0,334198218098.28,2290.0,2.385966666666667],["180100",2018,"Estonia",13975767.0,6454893.0,0.0,31222632740.72,2290.0,2.165143093773979],["180100",2018,"Germany",32704515.0,14356291.4,0.0,4055433215301.96,2290.0,2.2780615828977],["180100",2018,"Indonesia",128248068.0,58806300.0,0.0,1042271532988.63,2290.0,2.180855928701517],["180100",2017,"Algeria",762411.0,400062.0,0.0,189880896903.07,2030.0,1.892021808562119],["180100",2017,"Australia",54982.0,25128.0,0.0,1330890554614.09,2030.0,2.171056268509378],["180100",2017,"Belgium",25374416.0,12884829.4,0.0,500908767351.53,2030.0,1.974043626784752],["180100",2017,"Bulgaria",19609.0,8004.0,0.0,59167647387.61,2030.0,2.432274869759365],["180100",2017,"Canada",20921695.0,9713500.7,0.0,1649265644244.1,2030.0,2.140090623244759],["180100",2017,"China",8491102.0,4527371.0,0.0,12537559062282.9,2030.0,1.903329250710125],["180100",2017,"Colombia",237307.0,120000.0,0.0,311866875156.88,2030.0,1.977558333333333],["180100",2017,"Estonia",11638481.0,6353351.0,0.0,27469461919.12,2030.0,1.818651044227897],["180100",2017,"Germany",26281551.0,12329082.1,0.0,3765351626105.89,2030.0,2.094334227888527],["180100",2017,"Indonesia",85979276.0,43093423.0,0.0,1015618744159.73,2030.0,2.00443917776737],["180100",2016,"Algeria",580571.0,200100.0,0.0,180763839522.15,2890.0,2.901404297851074],["180100",2016,"Australia",158810.0,41929.0,0.0,1211588128417.61,2890.0,3.787593312504472],["180100",2016,"Belgium",18754844.0,6757044.0,0.0,474271566739.73,2890.0,2.775598915738894],["180100",2016,"Bulgaria",9513.0,3637.0,0.0,53929397039.21,2890.0,2.615617266978279],["180100",2016,"Canada",13930500.0,5068615.0,0.0,1527994741907.43,2890.0,2.748383927364773],["180100",2016,"China",18208579.0,11086759.0,0.0,11456024084962.0,2890.0,1.642371679586433],["180100",2016,"Colombia",12565923.0,4471058.0,0.0,282720100286.23,2890.0,2.810503241067327],["180100",2016,"Estonia",2493344.0,950475.0,0.0,24561027787.79,2890.0,2.623261001078408],["180100",2016,"Germany",37771676.0,12999885.0,0.0,3536787895179.0,2890.0,2.905539241308673],["180100",2016,"Indonesia",46376942.0,16654313.0,0.0,931877364037.7,2890.0,2.784680580940205],["180100",2015,"Australia",95170.0,26048.0,0.0,1356805839935.9,3130.0,3.653639434889435],["180100",2015,"Belgium",31218630.0,10265752.0,0.0,461044767544.53,3130.0,3.041046578954956],["180100",2015,"Canada",34787718.0,11602451.0,0.0,1556508816217.14,3130.0,2.998307685160661],["180100",2015,"China",18426286.0,6252751.0,0.0,11280814787468.9,3130.0,2.946908648689193],["180100",2015,"Colombia",8332909.0,2801150.0,0.0,293492370193.17,3130.0,2.974817128679292],["180100",2015,"Estonia",17696003.0,5853408.0,0.0,23311847750.94,3130.0,3.023196571979947],["180100",2015,"Germany",36139020.0,11500065.0,0.0,3425099578746.09,3130.0,3.142505716272038],["180100",2015,"Indonesia",11754648.0,3825684.0,0.0,860854232686.21,3130.0,3.072561142007547]];
+
+const COUNTRY_COORDS = {"Ecuador":[-1.8312,-78.1834],"Germany":[51.1657,10.4515],"Colombia":[4.5709,-74.2973],"Canada":[56.1304,-106.3468],"Australia":[-25.2744,133.7751],"China":[35.8617,104.1954],"Belgium":[50.5039,4.4699],"Estonia":[58.5953,25.0136],"Bulgaria":[42.7339,25.4858],"Indonesia":[-0.7893,113.9213],"Algeria":[28.0339,1.6596]};
+
+function roundValue(value, digits = 3) {
+  if (value === null || value === undefined || Number.isNaN(value)) return 0;
+  return Number(Number(value).toFixed(digits));
+}
+
+function average(values) {
+  const valid = values.filter(v => v !== null && v !== undefined && !Number.isNaN(v));
+  if (!valid.length) return null;
+  return valid.reduce((sum, value) => sum + Number(value), 0) / valid.length;
+}
+
+function buildDbFromTradeRows(rows) {
+  const years = [...new Set(rows.map(row => row[1]))].sort((a, b) => a - b);
+  const byYear = new Map();
+  const byCountryYear = new Map();
+  const byCountryProductYear = new Map();
+  const countryTotals = new Map();
+  const byProductYear = new Map();
+  const productTotals = new Map();
+
+  rows.forEach(([product_code, period, Partner, export_value, export_kg, tariff, gdp_importer, cocoa_price, unit_price]) => {
+    const yearKey = `${period}`;
+    const countryYearKey = `${period}__${Partner}`;
+    const countryProductYearKey = `${period}__${Partner}__${product_code}`;
+    const productYearKey = `${period}__${product_code}`;
+
+    if (!byYear.has(yearKey)) {
+      byYear.set(yearKey, { period, export_value: 0, export_kg: 0, cocoa_prices: [] });
+    }
+    const yearRow = byYear.get(yearKey);
+    yearRow.export_value += export_value || 0;
+    yearRow.export_kg += export_kg || 0;
+    if (cocoa_price !== null && cocoa_price !== undefined && !Number.isNaN(cocoa_price)) {
+      yearRow.cocoa_prices.push(cocoa_price);
+    }
+
+    if (!byCountryYear.has(countryYearKey)) {
+      byCountryYear.set(countryYearKey, { period, Partner, export_value: 0, export_kg: 0, tariffs: [], gdp_importers: [], products: new Map() });
+    }
+    const countryYearRow = byCountryYear.get(countryYearKey);
+    countryYearRow.export_value += export_value || 0;
+    countryYearRow.export_kg += export_kg || 0;
+    if (tariff !== null && tariff !== undefined && !Number.isNaN(tariff)) countryYearRow.tariffs.push(tariff);
+    if (gdp_importer !== null && gdp_importer !== undefined && !Number.isNaN(gdp_importer)) countryYearRow.gdp_importers.push(gdp_importer);
+    const existingProduct = countryYearRow.products.get(product_code) || { value: 0, kg: 0 };
+    existingProduct.value += export_value || 0;
+    existingProduct.kg += export_kg || 0;
+    countryYearRow.products.set(product_code, existingProduct);
+
+    if (!byCountryProductYear.has(countryProductYearKey)) {
+      byCountryProductYear.set(countryProductYearKey, { period, Partner, product_code, export_value: 0, export_kg: 0, tariffs: [], gdp_importers: [], unit_prices: [] });
+    }
+    const countryProductYearRow = byCountryProductYear.get(countryProductYearKey);
+    countryProductYearRow.export_value += export_value || 0;
+    countryProductYearRow.export_kg += export_kg || 0;
+    if (tariff !== null && tariff !== undefined && !Number.isNaN(tariff)) countryProductYearRow.tariffs.push(tariff);
+    if (gdp_importer !== null && gdp_importer !== undefined && !Number.isNaN(gdp_importer)) countryProductYearRow.gdp_importers.push(gdp_importer);
+    if (unit_price !== null && unit_price !== undefined && !Number.isNaN(unit_price)) countryProductYearRow.unit_prices.push(unit_price);
+
+    if (!countryTotals.has(Partner)) {
+      countryTotals.set(Partner, { Partner, export_value: 0, export_kg: 0 });
+    }
+    const countryTotalRow = countryTotals.get(Partner);
+    countryTotalRow.export_value += export_value || 0;
+    countryTotalRow.export_kg += export_kg || 0;
+
+    if (!byProductYear.has(productYearKey)) {
+      byProductYear.set(productYearKey, { period, product_code, export_value: 0, export_kg: 0 });
+    }
+    const productYearRow = byProductYear.get(productYearKey);
+    productYearRow.export_value += export_value || 0;
+    productYearRow.export_kg += export_kg || 0;
+
+    if (!productTotals.has(product_code)) {
+      productTotals.set(product_code, { product_code, export_value: 0 });
+    }
+    productTotals.get(product_code).export_value += export_value || 0;
+  });
+
+  const annual = years.map(period => {
+    const row = byYear.get(`${period}`);
+    return {
+      period,
+      export_value: roundValue(row.export_value),
+      export_kg: roundValue(row.export_kg),
+      avg_cocoa_price: roundValue(average(row.cocoa_prices), 2)
+    };
+  });
+
+  const countryYear = Array.from(byCountryYear.values())
+    .map(row => {
+      const topProduct = Array.from(row.products.entries()).sort((a, b) => b[1].value - a[1].value)[0] || null;
+      return {
+        period: row.period,
+        Partner: row.Partner,
+        export_value: roundValue(row.export_value),
+        export_kg: roundValue(row.export_kg),
+        avg_tariff: roundValue(average(row.tariffs), 2),
+        avg_gdp_importer: roundValue(average(row.gdp_importers), 2),
+        top_product_code: topProduct ? topProduct[0] : null,
+        top_product_value: topProduct ? roundValue(topProduct[1].value) : 0,
+        top_product_kg: topProduct ? roundValue(topProduct[1].kg) : 0,
+        top_product_label: topProduct ? topProduct[0] : null
+      };
+    })
+    .sort((a, b) => a.period - b.period || a.Partner.localeCompare(b.Partner));
+
+  const countryProductYear = Array.from(byCountryProductYear.values())
+    .map(row => ({
+      period: row.period,
+      Partner: row.Partner,
+      product_code: row.product_code,
+      product_label: PRODUCT_LABELS[row.product_code] || row.product_code,
+      export_value: roundValue(row.export_value),
+      export_kg: roundValue(row.export_kg),
+      avg_tariff: roundValue(average(row.tariffs), 2),
+      avg_gdp_importer: roundValue(average(row.gdp_importers), 2),
+      avg_unit_price: roundValue(average(row.unit_prices), 2)
+    }))
+    .sort((a, b) => a.period - b.period || a.Partner.localeCompare(b.Partner) || a.product_code.localeCompare(b.product_code));
+
+  const countryTotal = Array.from(countryTotals.values())
+    .map(row => ({
+      Partner: row.Partner,
+      export_value: roundValue(row.export_value),
+      export_kg: roundValue(row.export_kg)
+    }))
+    .sort((a, b) => b.export_value - a.export_value);
+
+  const product = Array.from(byProductYear.values())
+    .map(row => ({
+      period: row.period,
+      product_code: row.product_code,
+      export_value: roundValue(row.export_value),
+      export_kg: roundValue(row.export_kg)
+    }))
+    .sort((a, b) => a.period - b.period || a.product_code.localeCompare(b.product_code));
+
+  const productTotal = Array.from(productTotals.values())
+    .map(row => ({ product_code: row.product_code, export_value: roundValue(row.export_value) }))
+    .sort((a, b) => b.export_value - a.export_value);
+
+  const topMarket = countryTotal[0] || null;
+  const topProduct = productTotal[0] || null;
+
+  return {
+    years,
+    topCountries: countryTotal.slice(0, 10).map(row => row.Partner),
+    annual,
+    countryYear,
+    countryProductYear,
+    countryTotal,
+    product,
+    productLabels: PRODUCT_LABELS,
+    productTotal,
+    coords: COUNTRY_COORDS,
+    kpis: {
+      totalValue: roundValue(rows.reduce((sum, row) => sum + (row[3] || 0), 0)),
+      totalKg: roundValue(rows.reduce((sum, row) => sum + (row[4] || 0), 0)),
+      topMarket: topMarket ? topMarket.Partner : 'N/A',
+      topMarketValue: topMarket ? roundValue(topMarket.export_value) : 0,
+      topProduct: topProduct ? topProduct.product_code : 'N/A',
+      topProductValue: topProduct ? roundValue(topProduct.export_value) : 0,
+      startYear: years[0],
+      endYear: years[years.length - 1]
+    }
+  };
+}
+
+Object.assign(DB, buildDbFromTradeRows(RAW_TRADE_ROWS));
+DB.productLabels = PRODUCT_LABELS;
+
+const colors = {
+  blue: '#1f5fbf',
+  blue2: '#77a8ff',
+  accent: '#0f3d91',
+  grid: '#dbe5f2',
+  text: '#17324d',
+  muted: '#60738a',
+  soft: '#eef4ff'
+};
+
+function fmtMoney(v) {
+  if (v === null || v === undefined || isNaN(v)) return 'N/A';
+  if (Math.abs(v) >= 1e9) return '$' + (v/1e9).toFixed(2) + 'B';
+  if (Math.abs(v) >= 1e6) return '$' + (v/1e6).toFixed(2) + 'M';
+  if (Math.abs(v) >= 1e3) return '$' + (v/1e3).toFixed(1) + 'K';
+  return '$' + Number(v).toFixed(0);
+}
+function fmtKg(v) {
+  if (v === null || v === undefined || isNaN(v)) return 'N/A';
+  if (Math.abs(v) >= 1e6) return (v/1e6).toFixed(2) + 'M kg';
+  if (Math.abs(v) >= 1e3) return (v/1e3).toFixed(1) + 'K kg';
+  return Number(v).toFixed(0) + ' kg';
+}
+function fmtNum(v) {
+  if (v === null || v === undefined || isNaN(v)) return 'N/A';
+  return Number(v).toLocaleString(undefined, {maximumFractionDigits: 2});
+}
+
+const yearSelect = document.getElementById('yearSelect');
+const productSelect = document.getElementById('productSelect');
+const countrySelect = document.getElementById('countrySelect');
+let selectedCountry = null;
+
+const COUNTRY_FLAGS = {
+  Algeria: 'DZ',
+  Australia: 'AU',
+  Belgium: 'BE',
+  Bulgaria: 'BG',
+  Canada: 'CA',
+  China: 'CN',
+  Colombia: 'CO',
+  Ecuador: 'EC',
+  Estonia: 'EE',
+  Germany: 'DE',
+  Indonesia: 'ID'
+};
+
+function getCountryFlag(country) {
+  const code = COUNTRY_FLAGS[country];
+  if (!code) return '';
+  return code
+    .toUpperCase()
+    .split('')
+    .map(char => String.fromCodePoint(127397 + char.charCodeAt(0)))
+    .join('');
+}
+
+function getProductDisplay(productCode) {
+  if (!productCode || productCode === 'ALL') return 'All products';
+  const label = DB.productLabels[productCode] || productCode;
+  return `${productCode} - ${label}`;
+}
+
+function getCountryRow(country, year) {
+  return DB.countryYear.find(d => d.Partner === country && d.period === year) || null;
+}
+
+function getCountryProductRow(country, year, productCode) {
+  return DB.countryProductYear.find(
+    d => d.Partner === country && d.period === year && d.product_code === productCode
+  ) || null;
+}
+
+function getYearCountryData(year) {
+  return DB.countryYear
+    .filter(d => d.period === year)
+    .sort((a, b) => (b.export_value || 0) - (a.export_value || 0));
+}
+
+function getYearProductCountryData(year, productCode) {
+  return DB.countryProductYear
+    .filter(d => d.period === year && d.product_code === productCode)
+    .sort((a, b) => (b.export_value || 0) - (a.export_value || 0));
+}
+
+function getDefaultCountry(year, productCode) {
+  if (productCode && productCode !== 'ALL') {
+    const productData = getYearProductCountryData(year, productCode);
+    if (productData.length) return productData[0].Partner;
+  }
+  const yearData = getYearCountryData(year);
+  return yearData.length ? yearData[0].Partner : null;
+}
+
+function syncCountrySelect(year) {
+  const countryOptions = getYearCountryData(year).map(d => d.Partner);
+  countrySelect.innerHTML = countryOptions
+    .map(country => `<option value="${country}">${country}</option>`)
+    .join('');
+
+  const fallbackCountry = getDefaultCountry(year, productSelect.value);
+  if (!selectedCountry || !countryOptions.includes(selectedCountry)) {
+    selectedCountry = fallbackCountry;
+  }
+  if (selectedCountry) {
+    countrySelect.value = selectedCountry;
+  }
+}
+
+function populateControls() {
+  yearSelect.innerHTML = DB.years.map(y => `<option value="${y}">${y}</option>`).join('');
+  const productOptions = [
+    {value:'ALL', label:'All products'},
+    ...DB.productTotal.map(d => ({
+      value: d.product_code,
+      label: `${d.product_code} · ${(DB.productLabels[d.product_code] || d.product_code).slice(0,60)}`
+    }))
+  ];
+  productSelect.innerHTML = productOptions.map(p => `<option value="${p.value}">${p.label}</option>`).join('');
+  yearSelect.value = DB.years[DB.years.length - 1];
+  productSelect.value = 'ALL';
+  selectedCountry = getDefaultCountry(Number(yearSelect.value), productSelect.value);
+  syncCountrySelect(Number(yearSelect.value));
+}
+
+function setKpis() {
+  document.getElementById('kpiTotalValue').textContent = fmtMoney(DB.kpis.totalValue);
+  document.getElementById('kpiTotalKg').textContent = fmtKg(DB.kpis.totalKg);
+  document.getElementById('kpiTopMarket').textContent = DB.kpis.topMarket;
+  document.getElementById('kpiTopMarketValue').textContent = fmtMoney(DB.kpis.topMarketValue);
+  document.getElementById('kpiTopProduct').textContent = DB.kpis.topProduct;
+  document.getElementById('kpiTopProductValue').textContent = fmtMoney(DB.kpis.topProductValue);
+  document.getElementById('kpiSpan').textContent = `Period covered: ${DB.kpis.startYear}–${DB.kpis.endYear}`;
+}
+
+function baseLayout() {
+  return {
+    paper_bgcolor: 'white',
+    plot_bgcolor: 'white',
+    margin: {l: 60, r: 20, t: 20, b: 50},
+    font: {family: 'Inter, Arial, sans-serif', color: colors.text},
+    xaxis: {gridcolor: colors.grid, zeroline: false},
+    yaxis: {gridcolor: colors.grid, zeroline: false},
+    showlegend: true,
+    legend: {orientation: 'h', y: -0.18}
+  };
+}
+
+function renderTrend(productCode='ALL') {
+  let annualData;
+  if (productCode === 'ALL') {
+    annualData = DB.annual;
+  } else {
+    const filtered = DB.product.filter(d => d.product_code === productCode);
+    const yearMap = new Map();
+    DB.years.forEach(y => yearMap.set(y, {period:y, export_value:0, export_kg:0}));
+    filtered.forEach(r => {
+      const row = yearMap.get(r.period);
+      row.export_value += r.export_value || 0;
+      row.export_kg += r.export_kg || 0;
+    });
+    annualData = Array.from(yearMap.values());
+  }
+
+  const trace1 = {
+    x: annualData.map(d => d.period),
+    y: annualData.map(d => d.export_value),
+    type: 'scatter',
+    mode: 'lines+markers',
+    name: 'Export value (USD)',
+    line: {width: 3, color: colors.blue},
+    marker: {size: 8}
+  };
+  const trace2 = {
+    x: annualData.map(d => d.period),
+    y: annualData.map(d => d.export_kg),
+    type: 'scatter',
+    mode: 'lines+markers',
+    name: 'Export volume (kg)',
+    yaxis: 'y2',
+    line: {width: 3, dash: 'dot', color: colors.blue2},
+    marker: {size: 8}
+  };
+  const layout = baseLayout();
+  layout.yaxis.title = 'USD';
+  layout.yaxis2 = {title:'kg', overlaying:'y', side:'right', showgrid:false};
+  layout.margin.r = 60;
+  Plotly.newPlot('trendChart', [trace1, trace2], layout, {responsive:true, displayModeBar:false});
+}
+
+function renderCountryBar(selectedYear) {
+  const data = getYearCountryData(selectedYear);
+  document.getElementById('marketInsight').textContent = data.length ? `In ${selectedYear}, the largest market was ${data[0].Partner}.` : 'No data for selected year.';
+  const trace = {
+    x: data.map(d => d.export_value),
+    y: data.map(d => d.Partner),
+    type: 'bar',
+    orientation: 'h',
+    marker: {color: data.map((_,i)=> i===0 ? colors.accent : colors.blue2), line: {color:'white', width:1}},
+    customdata: data.map(d => [d.export_kg]),
+    hovertemplate: '<b>%{y}</b><br>Value: %{x:$,.0f}<br>KG: %{customdata[0]:,.0f}<extra></extra>'
+  };
+  const layout = baseLayout();
+  layout.margin.l = 100;
+  layout.yaxis = {automargin:true, autorange:'reversed'};
+  Plotly.newPlot('countryBar', [trace], layout, {responsive:true, displayModeBar:false});
+}
+
+function renderProductBar(selectedYear) {
+  let data = DB.product.filter(d => d.period === selectedYear).sort((a,b)=> (b.export_value||0) - (a.export_value||0));
+  const trace = {
+    x: data.map(d => d.export_value),
+    y: data.map(d => `${d.product_code}`),
+    type: 'bar',
+    orientation: 'h',
+    marker: {color: colors.blue},
+    text: data.map(d => (DB.productLabels[d.product_code] || '').slice(0,48)),
+    hovertemplate: '<b>HS %{y}</b><br>%{text}<br>Value: %{x:$,.0f}<extra></extra>'
+  };
+  const layout = baseLayout();
+  layout.margin.l = 90;
+  layout.yaxis = {automargin:true, autorange:'reversed'};
+  Plotly.newPlot('productBar', [trace], layout, {responsive:true, displayModeBar:false});
+}
+
+function renderScatter(selectedYear) {
+  const data = getYearCountryData(selectedYear);
+  const trace = {
+    x: data.map(d => d.avg_gdp_importer),
+    y: data.map(d => d.export_value),
+    text: data.map(d => d.Partner),
+    type: 'scatter',
+    mode: 'markers+text',
+    textposition: 'top center',
+    marker: {
+      size: data.map(d => Math.max(12, Math.min(40, ((d.export_kg||0)/500000)+12 ))),
+      color: colors.blue2,
+      line: {color: colors.accent, width:1.5},
+      opacity: .85
+    },
+    hovertemplate: '<b>%{text}</b><br>Importer GDP: %{x:,.0f}<br>Export value: %{y:$,.0f}<extra></extra>'
+  };
+  const layout = baseLayout();
+  layout.xaxis.title = 'Importer GDP';
+  layout.yaxis.title = 'Export value (USD)';
+  Plotly.newPlot('scatterChart', [trace], layout, {responsive:true, displayModeBar:false});
+}
+
+function renderMap(selectedYear) {
+  const ecu = DB.coords['Ecuador'];
+  const data = getYearCountryData(selectedYear);
+
+  const lineTraces = data.map((d, idx) => {
+    const c = DB.coords[d.Partner];
+    return {
+      type: 'scattergeo',
+      mode: 'lines',
+      lon: [ecu[1], c[1]],
+      lat: [ecu[0], c[0]],
+      line: {
+        width: d.Partner === selectedCountry ? 3.6 : (idx === 0 ? 2.6 : 1.6),
+        color: d.Partner === selectedCountry ? colors.accent : colors.blue2
+      },
+      opacity: 0.9,
+      hoverinfo: 'skip',
+      showlegend: false
+    };
+  });
+
+  const markerTrace = {
+    type: 'scattergeo',
+    mode: 'markers+text',
+    lon: data.map(d => DB.coords[d.Partner][1]),
+    lat: data.map(d => DB.coords[d.Partner][0]),
+    text: data.map(d => d.Partner),
+    textposition: 'top center',
+    marker: {
+      size: data.map(d => Math.max(10, Math.min(28, (d.export_value || 0)/5000000 + 10))),
+      color: data.map(d => d.Partner === selectedCountry ? colors.accent : colors.blue),
+      line: {color: 'white', width: 1.5}
+    },
+    customdata: data.map(d => [d.Partner, d.export_value, d.export_kg]),
+    hovertemplate: '<b>%{customdata[0]}</b><br>Value: %{customdata[1]:$,.0f}<br>KG: %{customdata[2]:,.0f}<extra></extra>',
+    name: 'Destinations'
+  };
+
+  const ecuadorTrace = {
+    type: 'scattergeo',
+    mode: 'markers+text',
+    lon: [ecu[1]],
+    lat: [ecu[0]],
+    text: ['Ecuador'],
+    textposition: 'bottom right',
+    marker: {size: 14, color: colors.accent, line: {color: 'white', width: 2}},
+    hoverinfo: 'text',
+    name: 'Origin'
+  };
+
+  const layout = {
+    paper_bgcolor: 'white',
+    margin: {l:0,r:0,t:0,b:0},
+    geo: {
+      projection: {
+        type:'orthographic',
+        rotation: {lon: -70, lat: 5, roll: 0}
+      },
+      showland: true,
+      landcolor: '#eaf2ff',
+      showcountries: true,
+      countrycolor: '#cad6e6',
+      coastlinecolor: '#b6cae2',
+      showocean: true,
+      oceancolor: '#dfeeff',
+      showlakes: true,
+      lakecolor: '#dfeeff',
+      bgcolor: 'white'
+    },
+    font: {family: 'Inter, Arial, sans-serif', color: colors.text}
+  };
+
+  document.getElementById('mapInsight').textContent = data.length ? `Strongest route in ${selectedYear}: Ecuador → ${data[0].Partner}` : 'No data for selected year.';
+  Plotly.newPlot('mapChart', [...lineTraces, markerTrace, ecuadorTrace], layout, {
+    responsive:true,
+    displayModeBar:true,
+    scrollZoom:true
+  });
+
+  const mapEl = document.getElementById('mapChart');
+  mapEl.on('plotly_click', function(ev) {
+    const point = ev.points[0];
+    if (!point.customdata) return;
+    selectedCountry = point.customdata[0];
+    countrySelect.value = selectedCountry;
+    updateDetailPanel();
+  });
+}
+
+function updateDetailPanel() {
+  const year = Number(yearSelect.value);
+  const productCode = productSelect.value;
+  const yearData = getYearCountryData(year);
+
+  if (!yearData.length) {
+    document.getElementById('detailPanel').innerHTML = `
+      <div class="detail-title">No data available</div>
+      <div class="detail-year">Selected year: ${year}</div>
+      <div class="detail-year">Selected product: ${getProductDisplay(productCode)}</div>
+    `;
+    return;
+  }
+
+  if (!selectedCountry || !getCountryRow(selectedCountry, year)) {
+    selectedCountry = getDefaultCountry(year, productCode);
+  }
+
+  const aggregateRow = getCountryRow(selectedCountry, year);
+  if (!aggregateRow) return;
+
+  const productRow = productCode === 'ALL'
+    ? null
+    : getCountryProductRow(selectedCountry, year, productCode);
+
+  const selectedProductText = getProductDisplay(productCode);
+  const topProductText = getProductDisplay(aggregateRow.top_product_code);
+  const activeValue = productRow ? productRow.export_value : (productCode === 'ALL' ? aggregateRow.export_value : 0);
+  const activeKg = productRow ? productRow.export_kg : (productCode === 'ALL' ? aggregateRow.export_kg : 0);
+  const activeTariff = productRow ? productRow.avg_tariff : (productCode === 'ALL' ? aggregateRow.avg_tariff : null);
+  const activeGdp = productRow ? productRow.avg_gdp_importer : aggregateRow.avg_gdp_importer;
+
+  let productBoxTitle = 'Strongest product in this market';
+  let productBoxMain = topProductText;
+  let productBoxSub = `Export value for top product: ${fmtMoney(aggregateRow.top_product_value)}`;
+
+  if (productCode !== 'ALL') {
+    productBoxTitle = 'Selected product in this market';
+    productBoxMain = selectedProductText;
+    if (productRow) {
+      productBoxSub = `Average unit price: ${fmtMoney(productRow.avg_unit_price)} | Tariff: ${activeTariff === null ? 'N/A' : `${fmtNum(activeTariff)}%`}`;
+    } else {
+      productBoxSub = `No exports recorded for ${selectedProductText} in ${selectedCountry} during ${year}.`;
+    }
+  }
+
+  const html = `
+    <div class="detail-title-row">
+      <div class="detail-title">${selectedCountry}</div>
+      <div class="detail-flag">${getCountryFlag(selectedCountry)}</div>
+    </div>
+    <div class="detail-year">Selected year: ${year}</div>
+    <div class="detail-year">Selected product: ${selectedProductText}</div>
+    <div class="detail-grid">
+      <div class="detail-box">
+        <div class="small">Export value</div>
+        <div class="big">${fmtMoney(activeValue)}</div>
+      </div>
+      <div class="detail-box">
+        <div class="small">Export volume</div>
+        <div class="big">${fmtKg(activeKg)}</div>
+      </div>
+      <div class="detail-box">
+        <div class="small">Average tariff</div>
+        <div class="big">${activeTariff === null ? 'N/A' : `${fmtNum(activeTariff)}%`}</div>
+      </div>
+      <div class="detail-box">
+        <div class="small">Importer GDP</div>
+        <div class="big">${fmtMoney(activeGdp)}</div>
+      </div>
+      <div class="detail-box" style="grid-column:1 / -1;">
+        <div class="small">${productBoxTitle}</div>
+        <div class="big" style="font-size:18px;">${productBoxMain}</div>
+        <div class="detail-year" style="margin-top:8px;">${productBoxSub}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('detailPanel').innerHTML = html;
+}
+
+function refreshAll() {
+  const year = Number(yearSelect.value);
+  const productCode = productSelect.value;
+  syncCountrySelect(year);
+  renderMap(year);
+  renderTrend(productCode);
+  renderCountryBar(year);
+  renderProductBar(year);
+  renderScatter(year);
+  updateDetailPanel();
+}
+
+populateControls();
+setKpis();
+refreshAll();
+
+yearSelect.addEventListener('change', refreshAll);
+productSelect.addEventListener('change', refreshAll);
+countrySelect.addEventListener('change', function() {
+  selectedCountry = countrySelect.value;
+  renderMap(Number(yearSelect.value));
+  updateDetailPanel();
+});
+</script>
+</body>
+</html>
