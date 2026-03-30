@@ -96,6 +96,8 @@
   .card-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; padding:6px 6px 10px; }
   .card-head h3 { margin:0; font-size:20px; }
   .card-head p { margin:6px 0 0; color: var(--text); font-size:14px; line-height:1.45; max-width:760px; }
+  .chart-filter { margin-top:12px; max-width:260px; }
+  .chart-filter label { margin-bottom:6px; font-size:11px; }
   .insight { color: #ffffff; background: var(--green); border:1px solid var(--green); border-radius:12px; padding:10px 12px; font-weight:700; font-size:13px; min-width:220px; }
   #detailPanel { padding:16px; min-height:180px; }
   .detail-title { font-size:22px; margin:0 0 6px; font-weight:800; }
@@ -234,39 +236,43 @@
     </div>
   </div>
 
+  <div class="card chart-card" style="margin-bottom:16px;">
+    <div class="card-head">
+      <div>
+        <h3>Export composition by product</h3>
+        <p>Clear ranking of products by export value so the concentration is easier to compare.</p>
+      </div>
+      <div class="insight" id="productInsight"></div>
+    </div>
+    <div id="productBar" style="height:400px;"></div>
+  </div>
+
   <div class="grid-2">
     <div class="card chart-card">
       <div class="card-head">
         <div>
-          <h3>Export composition by product</h3>
-          <p>Clear ranking of products by export value so the concentration is easier to compare.</p>
-        </div>
-        <div class="insight" id="productInsight"></div>
-      </div>
-      <div id="productBar" style="height:400px;"></div>
-    </div>
-
-    <div class="card chart-card">
-      <div class="card-head">
-        <div>
-          <h3>Market size vs export performance</h3>
-          <p>Indexed comparison to see whether Ecuador exports more to the biggest economies or to the most responsive markets.</p>
+          <h3>Importer GDP vs export value</h3>
+          <p>Simple relationship view to connect market size with export performance.</p>
+          <div class="chart-filter">
+            <label for="scatterCountrySelect">Country filter for this chart</label>
+            <select id="scatterCountrySelect"></select>
+          </div>
         </div>
         <div class="insight" id="scatterInsight"></div>
       </div>
-      <div id="scatterChart" style="height:400px;"></div>
+      <div id="scatterChart" style="height:360px;"></div>
     </div>
-  </div>
 
-  <div class="card chart-card" style="margin-bottom:16px;">
-    <div class="card-head">
-      <div>
-        <h3>International cocoa price</h3>
-        <p id="priceChartSubtitle">USD / metric ton · 2015–2024</p>
+    <div class="card chart-card" style="margin-bottom:16px;">
+      <div class="card-head">
+        <div>
+          <h3>International cocoa price</h3>
+          <p id="priceChartSubtitle">USD / metric ton · 2015–2024</p>
+        </div>
+        <div class="insight" id="priceInsight"></div>
       </div>
-      <div class="insight" id="priceInsight"></div>
+      <div id="priceChart" style="height:360px;"></div>
     </div>
-    <div id="priceChart" style="height:360px;"></div>
   </div>
 
   <div class="source-note">Dashboard built from the cleaned export database used in the group’s cocoa globalization case study. Recommended use: present the report first, then use this dashboard to reinforce trends, market concentration, value-added products, and risk exposure.</div>
@@ -485,7 +491,9 @@ function fmtNum(v) {
 const yearSelect = document.getElementById('yearSelect');
 const productSelect = document.getElementById('productSelect');
 const countrySelect = document.getElementById('countrySelect');
+const scatterCountrySelect = document.getElementById('scatterCountrySelect');
 let selectedCountry = null;
+let selectedScatterCountry = 'ALL';
 
 const COUNTRY_FLAGS = {
   Algeria: 'DZ',
@@ -575,6 +583,23 @@ function syncCountrySelect(year) {
   }
 }
 
+function syncScatterCountrySelect(year, productCode) {
+  const source = productCode === 'ALL'
+    ? getYearCountryData(year)
+    : getYearProductCountryData(year, productCode);
+
+  const countryOptions = source.map(d => d.Partner);
+  scatterCountrySelect.innerHTML = [
+    '<option value="ALL">All countries</option>',
+    ...countryOptions.map(country => `<option value="${country}">${country}</option>`)
+  ].join('');
+
+  if (selectedScatterCountry !== 'ALL' && !countryOptions.includes(selectedScatterCountry)) {
+    selectedScatterCountry = 'ALL';
+  }
+  scatterCountrySelect.value = selectedScatterCountry;
+}
+
 function populateControls() {
   yearSelect.innerHTML = DB.years.map(y => `<option value="${y}">${y}</option>`).join('');
   const productOptions = [
@@ -589,6 +614,7 @@ function populateControls() {
   productSelect.value = 'ALL';
   selectedCountry = getDefaultCountry(Number(yearSelect.value), productSelect.value);
   syncCountrySelect(Number(yearSelect.value));
+  syncScatterCountrySelect(Number(yearSelect.value), productSelect.value);
 }
 
 function setKpis() {
@@ -737,78 +763,81 @@ function renderProductBar(selectedYear) {
   Plotly.newPlot('productBar', [trace], layout, {responsive:true, displayModeBar:false});
 }
 
-function renderScatter(selectedYear) {
-  const data = getYearCountryData(selectedYear);
-  const sorted = [...data].sort((a, b) => (b.export_value || 0) - (a.export_value || 0));
-  const maxGdp = Math.max(...sorted.map(d => d.avg_gdp_importer || 0), 1);
-  const maxExport = Math.max(...sorted.map(d => d.export_value || 0), 1);
-  const chartData = sorted.map(d => ({
-    ...d,
-    gdpIndex: ((d.avg_gdp_importer || 0) / maxGdp) * 100,
-    exportIndex: ((d.export_value || 0) / maxExport) * 100
-  }));
+function renderScatter(selectedYear, productCode='ALL') {
+  const sourceData = (productCode === 'ALL' ? getYearCountryData(selectedYear) : getYearProductCountryData(selectedYear, productCode))
+    .filter(d => (d.export_value || 0) > 0 && (d.avg_gdp_importer || 0) > 0)
+    .sort((a, b) => (b.export_value || 0) - (a.export_value || 0));
 
-  const strongestMatch = chartData.reduce((best, row) => {
-    const gap = Math.abs(row.gdpIndex - row.exportIndex);
-    return !best || gap < best.gap ? {country: row.Partner, gap} : best;
-  }, null);
+  const data = selectedScatterCountry === 'ALL'
+    ? sourceData
+    : sourceData.filter(d => d.Partner === selectedScatterCountry);
 
-  document.getElementById('scatterInsight').textContent = strongestMatch
-    ? `${strongestMatch.country} is the closest match between market size and export performance in ${selectedYear}.`
-    : `No country data for ${selectedYear}.`;
+  const topExporter = data[0] || null;
+  document.getElementById('scatterInsight').textContent = topExporter
+    ? `Use this as context, not strict causality. ${selectedScatterCountry === 'ALL' ? `Top exporter in ${selectedYear}: ${topExporter.Partner}.` : `Filtered country: ${topExporter.Partner}.`}`
+    : `No market data for this selection.`;
 
-  const gdpTrace = {
-    x: chartData.map(d => d.gdpIndex),
-    y: chartData.map(d => d.Partner),
-    type: 'bar',
-    orientation: 'h',
-    name: 'GDP index',
-    marker: {
-      color: '#d9cfbf',
-      line: {color: '#c2b29b', width: 1}
+  const maxBubble = Math.max(...data.map(d => d.export_value || 0), 1);
+  const maxGdp = Math.max(...data.map(d => d.avg_gdp_importer || 0), 1);
+  const sizeRef = (2 * maxBubble) / (56 ** 2);
+  const labeledCountries = new Set(selectedScatterCountry === 'ALL'
+    ? data
+        .filter((d, index) => index < 4 || (d.avg_gdp_importer || 0) > maxGdp * 0.75)
+        .map(d => d.Partner)
+    : data.map(d => d.Partner)
+  );
+
+  const trace = {
+    x: data.map(d => d.avg_gdp_importer),
+    y: data.map(d => d.export_value),
+    text: data.map(d => labeledCountries.has(d.Partner) ? d.Partner : ''),
+    type: 'scatter',
+    mode: 'markers+text',
+    textposition: 'top center',
+    cliponaxis: false,
+    textfont: {
+      size: 13,
+      color: colors.text,
+      family: 'Poppins, Arial, sans-serif'
     },
-    customdata: chartData.map(d => [d.avg_gdp_importer || 0]),
-    hovertemplate: '<b>%{y}</b><br>GDP index: %{x:.1f}<br>Importer GDP: %{customdata[0]:$,.0f}<extra></extra>'
-  };
-
-  const exportTrace = {
-    x: chartData.map(d => d.exportIndex),
-    y: chartData.map(d => d.Partner),
-    type: 'bar',
-    orientation: 'h',
-    name: 'Export value index',
     marker: {
-      color: chartData.map((_, i) => i === 0 ? colors.accent : colors.blue),
-      line: {color: '#ffffff', width: 1}
+      size: data.map(d => d.export_value || 0),
+      sizemode: 'area',
+      sizeref: sizeRef,
+      sizemin: 10,
+      color: 'rgba(195, 182, 165, 0.82)',
+      line: {color: colors.accent, width: 1.8}
     },
-    customdata: chartData.map(d => [d.export_value || 0, d.export_kg || 0]),
-    hovertemplate: '<b>%{y}</b><br>Export index: %{x:.1f}<br>Export value: %{customdata[0]:$,.0f}<br>Volume: %{customdata[1]:,.0f} kg<extra></extra>'
+    customdata: data.map(d => [d.Partner, d.export_kg || 0, d.avg_gdp_importer || 0]),
+    hovertemplate: '<b>%{customdata[0]}</b><br>Importer GDP: %{x:$,.0f}<br>Export value: %{y:$,.0f}<br>Export volume: %{customdata[1]:,.0f} kg<extra></extra>',
+    hoverlabel: {
+      bgcolor: '#C3B6A5',
+      bordercolor: colors.accent,
+      font: {color: colors.text, family: 'Poppins, Arial, sans-serif'}
+    },
+    showlegend: false
   };
 
   const layout = {
     paper_bgcolor: 'white',
     plot_bgcolor: 'white',
-    margin: {l: 120, r: 28, t: 18, b: 52},
-    barmode: 'group',
-    bargap: 0.28,
+    margin: {l: 70, r: 24, t: 18, b: 62},
     font: {family: 'Poppins, Arial, sans-serif', color: colors.text},
     xaxis: {
-      title: 'Index (largest country in selected year = 100)',
-      gridcolor: colors.grid,
+      title: 'Importer GDP',
+      gridcolor: '#dfe6f2',
       zeroline: false,
-      range: [0, 110]
+      tickformat: '~s'
     },
     yaxis: {
-      automargin: true,
-      autorange: 'reversed'
-    },
-    legend: {
-      orientation: 'h',
-      y: -0.18
+      title: 'Export value (USD)',
+      gridcolor: '#dfe6f2',
+      zeroline: false,
+      tickformat: '~s'
     }
   };
 
-  Plotly.newPlot('scatterChart', [gdpTrace, exportTrace], layout, {responsive:true, displayModeBar:false});
+  Plotly.newPlot('scatterChart', [trace], layout, {responsive:true, displayModeBar:false});
 }
 
 function getPriceSeries(productCode='ALL') {
@@ -1072,11 +1101,12 @@ function refreshAll() {
   const year = Number(yearSelect.value);
   const productCode = productSelect.value;
   syncCountrySelect(year);
+  syncScatterCountrySelect(year, productCode);
   renderMap(year);
   renderTrend(productCode);
   renderCountryBar(year);
   renderProductBar(year);
-  renderScatter(year);
+  renderScatter(year, productCode);
   renderPriceChart(productCode);
   updateDetailPanel();
 }
@@ -1087,6 +1117,10 @@ refreshAll();
 
 yearSelect.addEventListener('change', refreshAll);
 productSelect.addEventListener('change', refreshAll);
+scatterCountrySelect.addEventListener('change', function() {
+  selectedScatterCountry = scatterCountrySelect.value;
+  renderScatter(Number(yearSelect.value), productSelect.value);
+});
 countrySelect.addEventListener('change', function() {
   selectedCountry = countrySelect.value;
   renderMap(Number(yearSelect.value));
