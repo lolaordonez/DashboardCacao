@@ -98,6 +98,8 @@
   .card-head p { margin:6px 0 0; color: var(--text); font-size:14px; line-height:1.45; max-width:760px; }
   .chart-filter { margin-top:12px; max-width:260px; }
   .chart-filter label { margin-bottom:6px; font-size:11px; }
+  .detail-filter { margin-top:14px; max-width:360px; }
+  .detail-filter label { margin-bottom:6px; font-size:11px; }
   .insight { color: #ffffff; background: var(--green); border:1px solid var(--green); border-radius:12px; padding:10px 12px; font-weight:700; font-size:13px; min-width:220px; }
   #detailPanel { padding:16px; min-height:180px; }
   .detail-title { font-size:22px; margin:0 0 6px; font-weight:800; }
@@ -155,10 +157,6 @@
         <label for="productSelect">Product filter for trend</label>
         <select id="productSelect"></select>
       </div>
-      <div class="control">
-        <label for="countrySelect">Country detail selector</label>
-        <select id="countrySelect"></select>
-      </div>
     </div>
 
     <div class="kpis">
@@ -200,9 +198,9 @@
 
     <div class="card">
       <div class="card-head" style="padding:20px 20px 0;">
-        <div>
-          <h3>Country detail</h3>
-          <p>This section helps explain market concentration and trade dynamics without overloading the dashboard.</p>
+        <div class="detail-filter" style="margin-top:0; max-width:none; width:100%;">
+          <label for="countrySelect">Country detail selector</label>
+          <select id="countrySelect"></select>
         </div>
       </div>
       <div id="detailPanel">
@@ -517,6 +515,8 @@ const SHORT_PRODUCT_LABELS = {
   '180632': 'Chocolate'
 };
 
+const ALL_YEARS = 'ALL';
+
 function getCountryFlag(country) {
   const code = COUNTRY_FLAGS[country];
   if (!code) return '';
@@ -537,44 +537,174 @@ function getProductShortLabel(productCode) {
   return SHORT_PRODUCT_LABELS[productCode] || DB.productLabels[productCode] || productCode;
 }
 
-function getCountryRow(country, year) {
-  return DB.countryYear.find(d => d.Partner === country && d.period === year) || null;
+function isAllYears(selectedYear) {
+  return selectedYear === ALL_YEARS;
 }
 
-function getCountryProductRow(country, year, productCode) {
-  return DB.countryProductYear.find(
-    d => d.Partner === country && d.period === year && d.product_code === productCode
-  ) || null;
+function getSelectedYear() {
+  return yearSelect.value === ALL_YEARS ? ALL_YEARS : Number(yearSelect.value);
 }
 
-function getYearCountryData(year) {
-  return DB.countryYear
-    .filter(d => d.period === year)
+function matchesSelectedYear(rowYear, selectedYear) {
+  return isAllYears(selectedYear) || rowYear === selectedYear;
+}
+
+function getYearLabel(selectedYear) {
+  return isAllYears(selectedYear) ? 'All years' : `${selectedYear}`;
+}
+
+function getScopeSubtitle(selectedYear, productCode) {
+  if (isAllYears(selectedYear) && productCode === 'ALL') {
+    return `Period covered: ${DB.years[0]}–${DB.years[DB.years.length - 1]}`;
+  }
+  const productLabel = productCode === 'ALL' ? 'All products' : getProductShortLabel(productCode);
+  return `Scope: ${getYearLabel(selectedYear)} · ${productLabel}`;
+}
+
+function getScopedCountryData(selectedYear, productCode = 'ALL') {
+  const rows = DB.countryProductYear.filter(row =>
+    matchesSelectedYear(row.period, selectedYear) &&
+    (productCode === 'ALL' || row.product_code === productCode)
+  );
+
+  const byCountry = new Map();
+  rows.forEach(row => {
+    if (!byCountry.has(row.Partner)) {
+      byCountry.set(row.Partner, {
+        Partner: row.Partner,
+        export_value: 0,
+        export_kg: 0,
+        tariffs: [],
+        gdps: [],
+        productTotals: new Map()
+      });
+    }
+
+    const countryRow = byCountry.get(row.Partner);
+    countryRow.export_value += row.export_value || 0;
+    countryRow.export_kg += row.export_kg || 0;
+
+    if (row.avg_tariff !== null && row.avg_tariff !== undefined && !Number.isNaN(row.avg_tariff)) {
+      countryRow.tariffs.push(row.avg_tariff);
+    }
+    if (row.avg_gdp_importer !== null && row.avg_gdp_importer !== undefined && !Number.isNaN(row.avg_gdp_importer)) {
+      countryRow.gdps.push(row.avg_gdp_importer);
+    }
+
+    if (!countryRow.productTotals.has(row.product_code)) {
+      countryRow.productTotals.set(row.product_code, { value: 0, kg: 0 });
+    }
+    const productTotals = countryRow.productTotals.get(row.product_code);
+    productTotals.value += row.export_value || 0;
+    productTotals.kg += row.export_kg || 0;
+  });
+
+  return Array.from(byCountry.values())
+    .map(row => {
+      const topProduct = Array.from(row.productTotals.entries()).sort((a, b) => b[1].value - a[1].value)[0] || null;
+      const activeProductCode = productCode === 'ALL' ? (topProduct ? topProduct[0] : null) : productCode;
+      const activeProductValue = productCode === 'ALL'
+        ? (topProduct ? roundValue(topProduct[1].value) : 0)
+        : roundValue(row.export_value);
+      const activeProductKg = productCode === 'ALL'
+        ? (topProduct ? roundValue(topProduct[1].kg) : 0)
+        : roundValue(row.export_kg);
+
+      return {
+        Partner: row.Partner,
+        export_value: roundValue(row.export_value),
+        export_kg: roundValue(row.export_kg),
+        avg_tariff: roundValue(average(row.tariffs), 2),
+        avg_gdp_importer: roundValue(average(row.gdps), 2),
+        avg_unit_price: row.export_kg > 0 ? roundValue(row.export_value / row.export_kg, 2) : null,
+        product_code: productCode === 'ALL' ? null : productCode,
+        top_product_code: activeProductCode,
+        top_product_value: activeProductValue,
+        top_product_kg: activeProductKg,
+        top_product_label: activeProductCode ? (DB.productLabels[activeProductCode] || activeProductCode) : null
+      };
+    })
     .sort((a, b) => (b.export_value || 0) - (a.export_value || 0));
 }
 
-function getYearProductCountryData(year, productCode) {
-  return DB.countryProductYear
-    .filter(d => d.period === year && d.product_code === productCode)
+function getScopedProductData(selectedYear) {
+  const productTotals = new Map();
+
+  DB.product
+    .filter(row => matchesSelectedYear(row.period, selectedYear))
+    .forEach(row => {
+      if (!productTotals.has(row.product_code)) {
+        productTotals.set(row.product_code, { product_code: row.product_code, export_value: 0, export_kg: 0 });
+      }
+
+      const productRow = productTotals.get(row.product_code);
+      productRow.export_value += row.export_value || 0;
+      productRow.export_kg += row.export_kg || 0;
+    });
+
+  return Array.from(productTotals.values())
+    .map(row => ({
+      product_code: row.product_code,
+      export_value: roundValue(row.export_value),
+      export_kg: roundValue(row.export_kg)
+    }))
     .sort((a, b) => (b.export_value || 0) - (a.export_value || 0));
 }
 
-function getDefaultCountry(year, productCode) {
+function getCountryRow(country, selectedYear) {
+  return getScopedCountryData(selectedYear, 'ALL').find(d => d.Partner === country) || null;
+}
+
+function getCountryProductRow(country, selectedYear, productCode) {
+  return getScopedCountryData(selectedYear, productCode).find(d => d.Partner === country) || null;
+}
+
+function getYearCountryData(selectedYear) {
+  return getScopedCountryData(selectedYear, 'ALL');
+}
+
+function getYearProductCountryData(selectedYear, productCode) {
+  return getScopedCountryData(selectedYear, productCode);
+}
+
+function getKpiSummary(selectedYear, productCode) {
+  const countryData = getScopedCountryData(selectedYear, productCode);
+  const totalValue = roundValue(countryData.reduce((sum, row) => sum + (row.export_value || 0), 0));
+  const totalKg = roundValue(countryData.reduce((sum, row) => sum + (row.export_kg || 0), 0));
+  const topMarket = countryData[0] || null;
+  const topProduct = productCode === 'ALL'
+    ? (getScopedProductData(selectedYear)[0] || null)
+    : {
+        product_code: productCode,
+        export_value: totalValue
+      };
+
+  return {
+    totalValue,
+    totalKg,
+    topMarket: topMarket ? topMarket.Partner : 'N/A',
+    topMarketValue: topMarket ? topMarket.export_value : null,
+    topProduct: topProduct ? topProduct.product_code : 'N/A',
+    topProductValue: topProduct ? topProduct.export_value : null
+  };
+}
+
+function getDefaultCountry(selectedYear, productCode) {
   if (productCode && productCode !== 'ALL') {
-    const productData = getYearProductCountryData(year, productCode);
+    const productData = getYearProductCountryData(selectedYear, productCode);
     if (productData.length) return productData[0].Partner;
   }
-  const yearData = getYearCountryData(year);
+  const yearData = getYearCountryData(selectedYear);
   return yearData.length ? yearData[0].Partner : null;
 }
 
-function syncCountrySelect(year) {
-  const countryOptions = getYearCountryData(year).map(d => d.Partner);
+function syncCountrySelect(selectedYear) {
+  const countryOptions = getYearCountryData(selectedYear).map(d => d.Partner);
   countrySelect.innerHTML = countryOptions
     .map(country => `<option value="${country}">${country}</option>`)
     .join('');
 
-  const fallbackCountry = getDefaultCountry(year, productSelect.value);
+  const fallbackCountry = getDefaultCountry(selectedYear, productSelect.value);
   if (!selectedCountry || !countryOptions.includes(selectedCountry)) {
     selectedCountry = fallbackCountry;
   }
@@ -583,10 +713,10 @@ function syncCountrySelect(year) {
   }
 }
 
-function syncScatterCountrySelect(year, productCode) {
+function syncScatterCountrySelect(selectedYear, productCode) {
   const source = productCode === 'ALL'
-    ? getYearCountryData(year)
-    : getYearProductCountryData(year, productCode);
+    ? getYearCountryData(selectedYear)
+    : getYearProductCountryData(selectedYear, productCode);
 
   const countryOptions = source.map(d => d.Partner);
   scatterCountrySelect.innerHTML = [
@@ -601,7 +731,10 @@ function syncScatterCountrySelect(year, productCode) {
 }
 
 function populateControls() {
-  yearSelect.innerHTML = DB.years.map(y => `<option value="${y}">${y}</option>`).join('');
+  yearSelect.innerHTML = [
+    ...DB.years.map(y => `<option value="${y}">${y}</option>`),
+    `<option value="${ALL_YEARS}">All years</option>`
+  ].join('');
   const productOptions = [
     {value:'ALL', label:'All products'},
     ...DB.productTotal.map(d => ({
@@ -610,21 +743,22 @@ function populateControls() {
     }))
   ];
   productSelect.innerHTML = productOptions.map(p => `<option value="${p.value}">${p.label}</option>`).join('');
-  yearSelect.value = DB.years[DB.years.length - 1];
+  yearSelect.value = String(DB.years[DB.years.length - 1]);
   productSelect.value = 'ALL';
-  selectedCountry = getDefaultCountry(Number(yearSelect.value), productSelect.value);
-  syncCountrySelect(Number(yearSelect.value));
-  syncScatterCountrySelect(Number(yearSelect.value), productSelect.value);
+  selectedCountry = getDefaultCountry(getSelectedYear(), productSelect.value);
+  syncCountrySelect(getSelectedYear());
+  syncScatterCountrySelect(getSelectedYear(), productSelect.value);
 }
 
-function setKpis() {
-  document.getElementById('kpiTotalValue').textContent = fmtMoney(DB.kpis.totalValue);
-  document.getElementById('kpiTotalKg').textContent = fmtKg(DB.kpis.totalKg);
-  document.getElementById('kpiTopMarket').textContent = DB.kpis.topMarket;
-  document.getElementById('kpiTopMarketValue').textContent = fmtMoney(DB.kpis.topMarketValue);
-  document.getElementById('kpiTopProduct').textContent = DB.kpis.topProduct;
-  document.getElementById('kpiTopProductValue').textContent = fmtMoney(DB.kpis.topProductValue);
-  document.getElementById('kpiSpan').textContent = `Period covered: ${DB.kpis.startYear}–${DB.kpis.endYear}`;
+function setKpis(selectedYear, productCode) {
+  const summary = getKpiSummary(selectedYear, productCode);
+  document.getElementById('kpiTotalValue').textContent = fmtMoney(summary.totalValue);
+  document.getElementById('kpiTotalKg').textContent = fmtKg(summary.totalKg);
+  document.getElementById('kpiTopMarket').textContent = summary.topMarket;
+  document.getElementById('kpiTopMarketValue').textContent = fmtMoney(summary.topMarketValue);
+  document.getElementById('kpiTopProduct').textContent = summary.topProduct;
+  document.getElementById('kpiTopProductValue').textContent = fmtMoney(summary.topProductValue);
+  document.getElementById('kpiSpan').textContent = getScopeSubtitle(selectedYear, productCode);
 }
 
 function baseLayout() {
@@ -684,7 +818,8 @@ function renderTrend(productCode='ALL') {
 
 function renderCountryBar(selectedYear) {
   const data = getYearCountryData(selectedYear);
-  document.getElementById('marketInsight').textContent = data.length ? `In ${selectedYear}, the largest market was ${data[0].Partner}.` : 'No data for selected year.';
+  const yearLabel = getYearLabel(selectedYear);
+  document.getElementById('marketInsight').textContent = data.length ? `In ${yearLabel}, the largest market was ${data[0].Partner}.` : 'No data for the selected scope.';
   const trace = {
     x: data.map(d => d.export_value),
     y: data.map(d => d.Partner),
@@ -701,15 +836,15 @@ function renderCountryBar(selectedYear) {
 }
 
 function renderProductBar(selectedYear) {
-  const data = DB.product
-    .filter(d => d.period === selectedYear && (d.export_value || 0) > 0)
-    .sort((a,b)=> (b.export_value||0) - (a.export_value||0));
+  const yearLabel = getYearLabel(selectedYear);
+  const data = getScopedProductData(selectedYear)
+    .filter(d => (d.export_value || 0) > 0);
 
   const totalValue = data.reduce((sum, row) => sum + (row.export_value || 0), 0);
   const leadProduct = data[0];
   document.getElementById('productInsight').textContent = leadProduct
-    ? `${getProductShortLabel(leadProduct.product_code)} leads with ${((leadProduct.export_value / totalValue) * 100).toFixed(1)}% of ${selectedYear} exports.`
-    : `No product data for ${selectedYear}.`;
+    ? `${getProductShortLabel(leadProduct.product_code)} leads with ${((leadProduct.export_value / totalValue) * 100).toFixed(1)}% of ${yearLabel} exports.`
+    : `No product data for ${yearLabel}.`;
 
   const trace = {
     x: data.map(d => d.export_value),
@@ -754,7 +889,7 @@ function renderProductBar(selectedYear) {
       yref: 'paper',
       xanchor: 'left',
       yanchor: 'bottom',
-      text: `<b>Total ${selectedYear}:</b> ${fmtMoney(totalValue)}`,
+      text: `<b>Total ${yearLabel}:</b> ${fmtMoney(totalValue)}`,
       showarrow: false,
       font: {size: 14, color: colors.text}
     }
@@ -764,6 +899,7 @@ function renderProductBar(selectedYear) {
 }
 
 function renderScatter(selectedYear, productCode='ALL') {
+  const yearLabel = getYearLabel(selectedYear);
   const sourceData = (productCode === 'ALL' ? getYearCountryData(selectedYear) : getYearProductCountryData(selectedYear, productCode))
     .filter(d => (d.export_value || 0) > 0 && (d.avg_gdp_importer || 0) > 0)
     .sort((a, b) => (b.export_value || 0) - (a.export_value || 0));
@@ -774,7 +910,7 @@ function renderScatter(selectedYear, productCode='ALL') {
 
   const topExporter = data[0] || null;
   document.getElementById('scatterInsight').textContent = topExporter
-    ? `Use this as context, not strict causality. ${selectedScatterCountry === 'ALL' ? `Top exporter in ${selectedYear}: ${topExporter.Partner}.` : `Filtered country: ${topExporter.Partner}.`}`
+    ? `Use this as context, not strict causality. ${selectedScatterCountry === 'ALL' ? `Top exporter in ${yearLabel}: ${topExporter.Partner}.` : `Filtered country: ${topExporter.Partner}.`}`
     : `No market data for this selection.`;
 
   const maxBubble = Math.max(...data.map(d => d.export_value || 0), 1);
@@ -927,6 +1063,7 @@ function renderPriceChart(productCode='ALL') {
 function renderMap(selectedYear) {
   const ecu = DB.coords['Ecuador'];
   const data = getYearCountryData(selectedYear);
+  const yearLabel = getYearLabel(selectedYear);
 
   const lineTraces = data.map((d, idx) => {
     const c = DB.coords[d.Partner];
@@ -1000,7 +1137,7 @@ function renderMap(selectedYear) {
     font: {family: 'Poppins, Arial, sans-serif', color: colors.text}
   };
 
-  document.getElementById('mapInsight').textContent = data.length ? `Strongest route in ${selectedYear}: Ecuador → ${data[0].Partner}` : 'No data for selected year.';
+  document.getElementById('mapInsight').textContent = data.length ? `Strongest route in ${yearLabel}: Ecuador → ${data[0].Partner}` : 'No data for the selected scope.';
   Plotly.newPlot('mapChart', [...lineTraces, markerTrace, ecuadorTrace], layout, {
     responsive:true,
     displayModeBar:true,
@@ -1018,14 +1155,15 @@ function renderMap(selectedYear) {
 }
 
 function updateDetailPanel() {
-  const year = Number(yearSelect.value);
+  const year = getSelectedYear();
   const productCode = productSelect.value;
+  const yearLabel = getYearLabel(year);
   const yearData = getYearCountryData(year);
 
   if (!yearData.length) {
     document.getElementById('detailPanel').innerHTML = `
       <div class="detail-title">No data available</div>
-      <div class="detail-year">Selected year: ${year}</div>
+      <div class="detail-year">Selected year: ${yearLabel}</div>
       <div class="detail-year">Selected product: ${getProductDisplay(productCode)}</div>
     `;
     return;
@@ -1059,7 +1197,7 @@ function updateDetailPanel() {
     if (productRow) {
       productBoxSub = `Average unit price: ${fmtMoney(productRow.avg_unit_price)} | Tariff: ${activeTariff === null ? 'N/A' : `${fmtNum(activeTariff)}%`}`;
     } else {
-      productBoxSub = `No exports recorded for ${selectedProductText} in ${selectedCountry} during ${year}.`;
+      productBoxSub = `No exports recorded for ${selectedProductText} in ${selectedCountry} during ${yearLabel}.`;
     }
   }
 
@@ -1068,7 +1206,7 @@ function updateDetailPanel() {
       <div class="detail-title">${selectedCountry}</div>
       <div class="detail-flag">${getCountryFlag(selectedCountry)}</div>
     </div>
-    <div class="detail-year">Selected year: ${year}</div>
+    <div class="detail-year">Selected year: ${yearLabel}</div>
     <div class="detail-year">Selected product: ${selectedProductText}</div>
     <div class="detail-grid">
       <div class="detail-box">
@@ -1098,10 +1236,11 @@ function updateDetailPanel() {
 }
 
 function refreshAll() {
-  const year = Number(yearSelect.value);
+  const year = getSelectedYear();
   const productCode = productSelect.value;
   syncCountrySelect(year);
   syncScatterCountrySelect(year, productCode);
+  setKpis(year, productCode);
   renderMap(year);
   renderTrend(productCode);
   renderCountryBar(year);
@@ -1112,18 +1251,17 @@ function refreshAll() {
 }
 
 populateControls();
-setKpis();
 refreshAll();
 
 yearSelect.addEventListener('change', refreshAll);
 productSelect.addEventListener('change', refreshAll);
 scatterCountrySelect.addEventListener('change', function() {
   selectedScatterCountry = scatterCountrySelect.value;
-  renderScatter(Number(yearSelect.value), productSelect.value);
+  renderScatter(getSelectedYear(), productSelect.value);
 });
 countrySelect.addEventListener('change', function() {
   selectedCountry = countrySelect.value;
-  renderMap(Number(yearSelect.value));
+  renderMap(getSelectedYear());
   updateDetailPanel();
 });
 </script>
