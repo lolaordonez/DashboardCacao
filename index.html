@@ -90,6 +90,7 @@
   .kpi .label { color: var(--text); font-size:12px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:10px; }
   .kpi .value { font-size:30px; font-weight:800; margin-bottom:6px; }
   .kpi .sub { color: var(--text); font-size:14px; }
+  .kpi-product .value { font-size:22px; line-height:1.2; }
   .grid { display:grid; grid-template-columns: 1.45fr .95fr; gap:16px; margin-bottom:16px; }
   .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px; }
   .chart-card { padding:14px 14px 6px; }
@@ -175,7 +176,7 @@
         <div class="value" id="kpiTopMarket"></div>
         <div class="sub" id="kpiTopMarketValue"></div>
       </div>
-      <div class="card kpi">
+      <div class="card kpi kpi-product">
         <div class="label">Leading product code</div>
         <div class="value" id="kpiTopProduct"></div>
         <div class="sub" id="kpiTopProductValue"></div>
@@ -752,11 +753,12 @@ function populateControls() {
 
 function setKpis(selectedYear, productCode) {
   const summary = getKpiSummary(selectedYear, productCode);
+  const activeProductCode = productCode === 'ALL' ? summary.topProduct : productCode;
   document.getElementById('kpiTotalValue').textContent = fmtMoney(summary.totalValue);
   document.getElementById('kpiTotalKg').textContent = fmtKg(summary.totalKg);
   document.getElementById('kpiTopMarket').textContent = summary.topMarket;
   document.getElementById('kpiTopMarketValue').textContent = fmtMoney(summary.topMarketValue);
-  document.getElementById('kpiTopProduct').textContent = summary.topProduct;
+  document.getElementById('kpiTopProduct').textContent = getProductDisplay(activeProductCode);
   document.getElementById('kpiTopProductValue').textContent = fmtMoney(summary.topProductValue);
   document.getElementById('kpiSpan').textContent = getScopeSubtitle(selectedYear, productCode);
 }
