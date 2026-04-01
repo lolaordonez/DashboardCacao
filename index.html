@@ -108,7 +108,15 @@
   #detailPanel { padding:16px; min-height:180px; }
   .detail-title { font-size:22px; margin:0 0 6px; font-weight:800; }
   .detail-title-row { display:flex; align-items:center; gap:10px; margin:0 0 6px; }
-  .detail-flag { font-size:28px; line-height:1; }
+  .detail-flag {
+    width:42px;
+    height:30px;
+    object-fit:cover;
+    border-radius:6px;
+    border:1px solid rgba(0,0,0,.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    flex:0 0 auto;
+  }
   .detail-year { color: var(--text); margin-bottom:16px; font-weight:600; }
   .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .detail-box { background:#f6f1ea; border:1px solid #ded3c5; border-radius:14px; padding:12px; }
@@ -524,11 +532,8 @@ const ALL_YEARS = 'ALL';
 function getCountryFlag(country) {
   const code = COUNTRY_FLAGS[country];
   if (!code) return '';
-  return code
-    .toUpperCase()
-    .split('')
-    .map(char => String.fromCodePoint(127397 + char.charCodeAt(0)))
-    .join('');
+  const lowerCode = code.toLowerCase();
+  return `<img class="detail-flag" src="https://flagcdn.com/${lowerCode}.svg" alt="${country} flag" loading="lazy" />`;
 }
 
 function getProductDisplay(productCode) {
@@ -1214,7 +1219,7 @@ function updateDetailPanel() {
   const html = `
     <div class="detail-title-row">
       <div class="detail-title">${selectedCountry}</div>
-      <div class="detail-flag">${getCountryFlag(selectedCountry)}</div>
+      ${getCountryFlag(selectedCountry)}
     </div>
     <div class="detail-year">Selected year: ${yearLabel}</div>
     <div class="detail-year">Selected product: ${selectedProductText}</div>
