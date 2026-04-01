@@ -91,6 +91,9 @@
   .kpi .value { font-size:30px; font-weight:800; margin-bottom:6px; }
   .kpi .sub { color: var(--text); font-size:14px; }
   .kpi-product .value { font-size:22px; line-height:1.2; }
+  .kpi-product .value span { display:block; }
+  .kpi-product-code { font-size:28px; }
+  .kpi-product-name { font-size:16px; font-weight:700; margin-top:4px; }
   .grid { display:grid; grid-template-columns: 1.45fr .95fr; gap:16px; margin-bottom:16px; }
   .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px; }
   .chart-card { padding:14px 14px 6px; }
@@ -530,7 +533,7 @@ function getCountryFlag(country) {
 
 function getProductDisplay(productCode) {
   if (!productCode || productCode === 'ALL') return 'All products';
-  const label = DB.productLabels[productCode] || productCode;
+  const label = PRODUCT_LABELS[productCode] || DB.productLabels[productCode] || productCode;
   return `${productCode} - ${label}`;
 }
 
@@ -754,11 +757,16 @@ function populateControls() {
 function setKpis(selectedYear, productCode) {
   const summary = getKpiSummary(selectedYear, productCode);
   const activeProductCode = productCode === 'ALL' ? summary.topProduct : productCode;
+  const activeProductName = SHORT_PRODUCT_LABELS[activeProductCode] || PRODUCT_LABELS[activeProductCode] || activeProductCode;
+  const activeProductFull = getProductDisplay(activeProductCode);
   document.getElementById('kpiTotalValue').textContent = fmtMoney(summary.totalValue);
   document.getElementById('kpiTotalKg').textContent = fmtKg(summary.totalKg);
   document.getElementById('kpiTopMarket').textContent = summary.topMarket;
   document.getElementById('kpiTopMarketValue').textContent = fmtMoney(summary.topMarketValue);
-  document.getElementById('kpiTopProduct').textContent = getProductDisplay(activeProductCode);
+  document.getElementById('kpiTopProduct').innerHTML = `
+    <span class="kpi-product-code">${activeProductCode || 'N/A'}</span>
+    <span class="kpi-product-name" title="${activeProductFull}">${activeProductName}</span>
+  `;
   document.getElementById('kpiTopProductValue').textContent = fmtMoney(summary.topProductValue);
   document.getElementById('kpiSpan').textContent = getScopeSubtitle(selectedYear, productCode);
 }
